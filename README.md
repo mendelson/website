@@ -74,3 +74,40 @@ Source: GitHub Actions**. The custom domain is set via `public/CNAME`
   but the live-data lookup requires the backend service that powered it on
   WordPress. The UI is preserved; wiring it to a backend is a follow-up.
 - Old URLs are preserved 1:1 so existing inbound links keep working.
+
+## Continuing in a new session
+
+The media assets shipped with the first commit are **placeholders**. To swap in
+the real images/PDFs you need a session whose environment can reach
+`mmendelson.com` (add the host under **Network access → Custom → Allowed
+domains**, or use **Full**). Then paste the prompt below into the new chat:
+
+```
+Contexto: este repositório (mendelson/website) é a migração do meu site
+pessoal de WordPress para um site estático. A estrutura, páginas, CSS e o
+gerador (build.py) já estão prontos na branch
+claude/wordpress-to-code-migration-e1c7ks (e na main). Detalhes no README.md
+e em ASSETS_NEEDED.md.
+
+Pendência: as imagens/PDFs ainda são PLACEHOLDERS porque o acesso a
+mmendelson.com estava bloqueado pela política de rede. Já liberei
+mmendelson.com na allowlist de egress do environment.
+
+Tarefa:
+1. Confirme o acesso a mmendelson.com (curl de teste numa URL de
+   ASSETS_NEEDED.md).
+2. Rode `bash tools/fetch_assets.sh` para baixar as imagens/PDFs originais.
+3. Verifique que os arquivos são reais (tamanho/tipo) e substituíram os
+   placeholders. Se algum der 403/404, me avise quais.
+4. Rode `python3 build.py` e confira o site em public/.
+5. Comite e dê push na branch claude/wordpress-to-code-migration-e1c7ks E
+   atualize a main (fast-forward) — o deploy do GitHub Pages dispara em push
+   na main.
+
+Itens em aberto:
+- E-mail de contato confirmado: mendelson.mateus@gmail.com.
+- Falta a URL do Lattes (há ícone, falta a URL) para adicionar ao footer.
+- /tracker/ tem a UI preservada, mas os dados ao vivo dependem de um backend.
+- Conferir se o GitHub Pages está ativo (Settings > Pages > Source: GitHub
+  Actions) e se o workflow "Build and deploy" rodou com sucesso.
+```
