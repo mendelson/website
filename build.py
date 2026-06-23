@@ -44,15 +44,15 @@ PAGES = [
     # slug-file        url                          title                              h1                                   description
     ("home",           "/",                         "Mateus Mendelson",                "",                                  "Personal website of Mateus Mendelson — Data Scientist, lecturer and developer."),
     ("teaching",       "/teaching/",                "Teaching — Mateus Mendelson",     "Teaching",                          "Information about the classes taught by Mateus Mendelson."),
-    ("fga",            "/fga/",                     "UnB Gama — Mateus Mendelson",     "University of Brasília - Gama",      "Courses taught at the University of Brasília - Gama (UnB/FGA)."),
-    ("iesb",           "/university-center-iesb/",  "IESB — Mateus Mendelson",         "University Center IESB",            "Courses taught at the University Center IESB."),
-    ("projecao",       "/projecao/",                "Projeção — Mateus Mendelson",     "University Center Projeção",        "Courses taught at the University Center Projeção."),
+    ("fga",            "/teaching/fga/",            "UnB Gama — Mateus Mendelson",     "University of Brasília - Gama",      "Courses taught at the University of Brasília - Gama (UnB/FGA)."),
+    ("iesb",           "/teaching/university-center-iesb/", "IESB — Mateus Mendelson", "University Center IESB",            "Courses taught at the University Center IESB."),
+    ("projecao",       "/teaching/projecao/",       "Projeção — Mateus Mendelson",     "University Center Projeção",        "Courses taught at the University Center Projeção."),
     ("publications",   "/publications/",            "Publications — Mateus Mendelson", "Publications",                      "Academic publications, theses and conference papers by Mateus Mendelson."),
     ("extra-resources","/extra-resources/",         "Extra resources — Mateus Mendelson","Extra resources",                "Slide presentations, class notes and other learning resources."),
     ("off",            "/off/",                     "Side projects — Mateus Mendelson","Side projects",                    "Personal interests and side projects."),
-    ("music-sheets",   "/music-sheets/",            "Music Sheets — Mateus Mendelson", "Music Sheets",                     "Music sheets transcribed by Mateus Mendelson."),
+    ("music-sheets",   "/off/music-sheets/",        "Music Sheets — Mateus Mendelson", "Music Sheets",                     "Music sheets transcribed by Mateus Mendelson."),
     ("cv",             "/cv/",                      "CV — Mateus Mendelson",           "CV",                               "Curriculum Vitae of Mateus Mendelson."),
-    ("a-coxinha",      "/a-coxinha/",               "A Coxinha — Mateus Mendelson",    "A Coxinha",                        "An example page built during an HTML 101 class."),
+    ("a-coxinha",      "/off/a-coxinha/",           "A Coxinha — Mateus Mendelson",    "A Coxinha",                        "An example page built during an HTML 101 class."),
     ("tracker",        "/tracker/",                 "Garmin Tracker — Mateus Mendelson","Garmin Tracker Data Field",        "Live tracking companion for the Garmin Tracker Data Field."),
 ]
 
@@ -62,19 +62,18 @@ PAGES = [
 NAV = [
     ("Home", "/", []),
     ("Teaching", "/teaching/", [
-        ("University of Brasília – Gama", "/fga/"),
-        ("IESB", "/university-center-iesb/"),
-        ("Projeção", "/projecao/"),
+        ("University of Brasília – Gama", "/teaching/fga/"),
+        ("IESB", "/teaching/university-center-iesb/"),
+        ("Projeção", "/teaching/projecao/"),
     ]),
     ("Publications", "/publications/", []),
     ("Extra resources", "/extra-resources/", []),
     ("Side projects", "/off/", [
         ("Garmin Apps", "/garmin-apps/"),
-        ("Races in the World", "/run/"),
-        ("Byte Papo", "/byte-papo/"),
-        ("Music Sheets", "/music-sheets/"),
+        ("Races in the World", "/off/run/"),
+        ("Byte Papo", "/off/byte-papo/"),
+        ("Music Sheets", "/off/music-sheets/"),
     ]),
-    ("Contact", "/contact/", []),
 ]
 
 # --------------------------------------------------------------------------
@@ -100,12 +99,20 @@ SOCIAL = [
 # behaviour of the original WordPress site: a few menu items keep their own
 # URL but bounce to an external destination.
 REDIRECTS = {
-    # Menu items: own URL on this site, but redirect off-site (as on the original).
-    "/contact/": "https://taggo.one/mmendelson",
+    # Menu items / pages that bounce off-site on the original.
     "/garmin-apps/": "http://apps.mmendelson.com/",
-    "/run/": "http://run.mmendelson.com/",
-    "/byte-papo/": "https://open.spotify.com/show/1zGax7Ftyup8WKN7BQGJ1g",
-    # Old slugs.
+    "/off/run/": "http://run.mmendelson.com/",
+    "/off/byte-papo/": "https://open.spotify.com/show/1zGax7Ftyup8WKN7BQGJ1g",
+    "/contact/": "https://taggo.one/mmendelson",
+    # Legacy flat slugs -> nested canonical paths (the original 301s these).
+    "/fga/": "/teaching/fga/",
+    "/university-center-iesb/": "/teaching/university-center-iesb/",
+    "/projecao/": "/teaching/projecao/",
+    "/music-sheets/": "/off/music-sheets/",
+    "/a-coxinha/": "/off/a-coxinha/",
+    "/run/": "/off/run/",
+    "/byte-papo/": "/off/byte-papo/",
+    # Other old slugs.
     "/findme/": "https://taggo.one/mmendelson",
     "/contato/": "https://taggo.one/mmendelson",
     "/garmin-pricing/": "https://kiezelpay.com/code/?s=6B55524C-B713-A5B0-5C41-2D9341952181&dsu=2277156&p=69899-65105-76769-67043-67044-67046-65066-63790-66655-76730-69886&platform=garmin",

@@ -74,11 +74,15 @@ by the `CUSTOM_DOMAIN` setting near the top of `build.py`:
 
 ## Notes / known gaps
 
-- The pages `findme`, `contato`, `garmin-pricing`, `tracker-data-field`, `pair`
-  were built with Beaver Builder in WordPress; their content is **not** included
-  in the standard export, so they are implemented as redirects to the closest
-  equivalent page.
+- **Links & redirects mirror the original site 1:1.** Pages live at the same
+  canonical (nested) URLs as the old WordPress site — e.g. `/teaching/fga/`,
+  `/off/music-sheets/` — and the flat slugs (`/fga/`, `/music-sheets/`, …) 301
+  to them. Menu items that bounced off-site on the original keep their own URL
+  but redirect out: `/garmin-apps/` → `apps.mmendelson.com`, `/off/run/` →
+  `run.mmendelson.com`, `/off/byte-papo/` → Spotify, `/contact/` →
+  `taggo.one/mmendelson`. See `REDIRECTS` in `build.py` for the full map.
+- Dropdown parents (Teaching, Side projects) only reveal their submenu — they
+  do not navigate to a page.
 - `/tracker/` keeps the original UI of the Garmin Tracker Data Field companion,
   but the live-data lookup requires the backend service that powered it on
   WordPress. The UI is preserved; wiring it to a backend is a follow-up.
-- Old URLs are preserved 1:1 so existing inbound links keep working.
