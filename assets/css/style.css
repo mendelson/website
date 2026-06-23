@@ -104,6 +104,7 @@ hr {
 }
 
 /* Dropdowns */
+.primary-nav .has-children > a { cursor: pointer; }
 .primary-nav .has-children > a::after {
   content: "\25BE";
   font-size: .7em;
@@ -125,7 +126,8 @@ hr {
   z-index: 110;
 }
 .primary-nav .has-children:hover .submenu,
-.primary-nav .has-children:focus-within .submenu { display: flex; }
+.primary-nav .has-children:focus-within .submenu,
+.primary-nav .has-children.open > .submenu { display: flex; }
 .primary-nav .submenu a {
   color: var(--text);
   padding: .55rem .75rem;

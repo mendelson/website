@@ -50,11 +50,7 @@ PAGES = [
     ("publications",   "/publications/",            "Publications — Mateus Mendelson", "Publications",                      "Academic publications, theses and conference papers by Mateus Mendelson."),
     ("extra-resources","/extra-resources/",         "Extra resources — Mateus Mendelson","Extra resources",                "Slide presentations, class notes and other learning resources."),
     ("off",            "/off/",                     "Side projects — Mateus Mendelson","Side projects",                    "Personal interests and side projects."),
-    ("garmin-apps",    "/garmin-apps/",             "Garmin Apps — Mateus Mendelson",  "Garmin Apps by M. Mendelson",      "Apps for Garmin watches developed by Mateus Mendelson on the Connect IQ store."),
-    ("run",            "/run/",                     "Races in the World — Mateus Mendelson","Races in the World",          "A log of races run around the world."),
-    ("byte-papo",      "/byte-papo/",               "Byte Papo — Mateus Mendelson",    "Byte Papo",                        "Byte Papo, a podcast hosted by Mateus Mendelson."),
     ("music-sheets",   "/music-sheets/",            "Music Sheets — Mateus Mendelson", "Music Sheets",                     "Music sheets transcribed by Mateus Mendelson."),
-    ("contact",        "/contact/",                 "Contact — Mateus Mendelson",      "Contact",                          "How to get in touch with Mateus Mendelson."),
     ("cv",             "/cv/",                      "CV — Mateus Mendelson",           "CV",                               "Curriculum Vitae of Mateus Mendelson."),
     ("a-coxinha",      "/a-coxinha/",               "A Coxinha — Mateus Mendelson",    "A Coxinha",                        "An example page built during an HTML 101 class."),
     ("tracker",        "/tracker/",                 "Garmin Tracker — Mateus Mendelson","Garmin Tracker Data Field",        "Live tracking companion for the Garmin Tracker Data Field."),
@@ -99,13 +95,22 @@ SOCIAL = [
      '<path d="M0 4a2 2 0 0 1 2-2h20a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2.4.5 9.6 6.4 9.6-6.4H2.4zM22 6.6l-9.43 6.29a1 1 0 0 1-1.14 0L2 6.6V20h20V6.6z"/>'),
 ]
 
-# Old slugs that should redirect to a canonical page.
+# Slugs that redirect instead of rendering a page.  Values may be an internal
+# path (kept on this site) or an absolute URL (off-site).  These mirror the
+# behaviour of the original WordPress site: a few menu items keep their own
+# URL but bounce to an external destination.
 REDIRECTS = {
-    "/findme/": "/contact/",
-    "/contato/": "/contact/",
+    # Menu items: own URL on this site, but redirect off-site (as on the original).
+    "/contact/": "https://taggo.one/mmendelson",
+    "/garmin-apps/": "http://apps.mmendelson.com/",
+    "/run/": "http://run.mmendelson.com/",
+    "/byte-papo/": "https://open.spotify.com/show/1zGax7Ftyup8WKN7BQGJ1g",
+    # Old slugs.
+    "/findme/": "https://taggo.one/mmendelson",
+    "/contato/": "https://taggo.one/mmendelson",
+    "/garmin-pricing/": "https://kiezelpay.com/code/?s=6B55524C-B713-A5B0-5C41-2D9341952181&dsu=2277156&p=69899-65105-76769-67043-67044-67046-65066-63790-66655-76730-69886&platform=garmin",
+    "/pair/": "https://api.mmendelson.com/pair",
     "/tracker-data-field/": "/tracker/",
-    "/garmin-pricing/": "/garmin-apps/",
-    "/pair/": "/garmin-apps/",
     "/inicio/": "/",
 }
 
@@ -140,10 +145,13 @@ def build_nav(current_url):
                 '<li><a href="{}"{}>{}</a></li>'.format(
                     BASE + cu, ' class="active"' if cu == current_url else "", cl)
                 for cl, cu in children)
+            # Parent items only reveal the submenu — they do not link to a page.
             items.append(
-                '<li class="has-children"><a href="{}" class="{}">{}</a>'
+                '<li class="has-children">'
+                '<a class="menu-parent{}" role="button" tabindex="0" '
+                'aria-haspopup="true" aria-expanded="false">{}</a>'
                 '<ul class="submenu">{}</ul></li>'.format(
-                    BASE + url, ("active" if active else "").strip(), label, sub))
+                    " active" if active else "", label, sub))
         else:
             items.append('<li><a href="{}"{}>{}</a></li>'.format(
                 BASE + url, ' class="active"' if active else "", label))
@@ -193,18 +201,24 @@ def write_file(path, content):
 
 
 def redirect_html(target):
-    link = BASE + target
+    external = target.startswith(("http://", "https://"))
+    link = target if external else BASE + target
+    canonical = target if external else SITE_URL + target
+    # & is legal in a JS string / location.replace, but must be escaped in
+    # HTML attribute contexts (href, meta content, canonical).
+    link_attr = link.replace("&", "&amp;")
+    canonical_attr = canonical.replace("&", "&amp;")
     return (
         '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
         '<title>Redirecting…</title>'
-        '<link rel="canonical" href="{site}{t}">'
-        '<meta http-equiv="refresh" content="0; url={link}">'
+        '<link rel="canonical" href="{c}">'
+        '<meta http-equiv="refresh" content="0; url={la}">'
         '<meta name="robots" content="noindex">'
         '</head><body>'
-        '<p>This page has moved. <a href="{link}">Click here</a> if you are not '
+        '<p>This page has moved. <a href="{la}">Click here</a> if you are not '
         'redirected automatically.</p>'
         '<script>location.replace("{link}");</script>'
-        '</body></html>'.format(site=SITE_URL, t=target, link=link))
+        '</body></html>'.format(c=canonical_attr, la=link_attr, link=link))
 
 
 def main():
