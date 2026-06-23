@@ -96,21 +96,28 @@ hr {
   border-radius: 6px;
   font-size: .95rem;
 }
-.primary-nav a:hover,
-.primary-nav a.active {
-  background: rgba(255,255,255,.12);
+.primary-nav a:hover {
+  background: rgba(255,255,255,.1);
   color: #fff;
   text-decoration: none;
+}
+/* Only the current page gets a clear, single highlight. */
+.primary-nav > ul > li > a.active {
+  background: var(--accent);
+  color: #fff;
 }
 
 /* Dropdowns */
 .primary-nav .has-children > a { cursor: pointer; }
 .primary-nav .has-children > a::after {
   content: "\25BE";
+  display: inline-block;
   font-size: .7em;
   margin-left: .35rem;
-  opacity: .8;
+  opacity: .7;
+  transition: transform .2s ease;
 }
+.primary-nav .has-children.open > a::after { transform: rotate(-180deg); }
 .primary-nav .submenu {
   display: none;
   position: absolute;
@@ -125,18 +132,27 @@ hr {
   flex-direction: column;
   z-index: 110;
 }
-.primary-nav .has-children:hover .submenu,
-.primary-nav .has-children:focus-within .submenu,
+/* Submenus are closed by default and only open via the .open class
+   (click/tap/keyboard) or, on pointer devices, on hover/focus. */
 .primary-nav .has-children.open > .submenu { display: flex; }
 .primary-nav .submenu a {
   color: var(--text);
   padding: .55rem .75rem;
   white-space: nowrap;
 }
-.primary-nav .submenu a:hover,
-.primary-nav .submenu a.active {
+.primary-nav .submenu a:hover {
   background: var(--bg-alt);
   color: var(--accent-dark);
+}
+.primary-nav .submenu a.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+@media (min-width: 769px) {
+  .primary-nav .has-children:hover > .submenu,
+  .primary-nav .has-children:focus-within > .submenu { display: flex; }
+  .primary-nav .has-children:hover > a::after { transform: rotate(-180deg); }
 }
 
 .nav-toggle {
@@ -254,16 +270,25 @@ main { min-height: 60vh; padding: 2.5rem 0 3.5rem; }
   }
   .primary-nav.open { display: block; }
   .primary-nav ul { flex-direction: column; gap: 0; }
+  .primary-nav li { border-radius: 0; }
+  .primary-nav > ul > li:not(:last-child) {
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .primary-nav a { border-radius: 6px; }
+  /* Accordion: submenus stay collapsed until the parent is tapped. */
   .primary-nav .submenu {
-    display: flex;
     position: static;
+    min-width: 0;
     box-shadow: none;
     border: none;
-    background: rgba(255,255,255,.05);
-    padding-left: 1rem;
+    border-radius: 0;
+    background: rgba(255,255,255,.06);
+    margin: .15rem 0 .35rem .5rem;
+    padding: .15rem .35rem;
   }
   .primary-nav .submenu a { color: var(--header-text); }
-  .primary-nav .has-children > a::after { content: ""; }
+  .primary-nav .submenu a:hover { background: rgba(255,255,255,.12); color: #fff; }
+  .primary-nav .has-children > a { display: flex; justify-content: space-between; align-items: center; }
   .profile_pic { float: none; display: block; margin: 0 auto 1.5rem; }
   .wp-block-columns { flex-direction: column; }
 }
