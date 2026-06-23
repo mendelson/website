@@ -1,3 +1,6 @@
+# Generated site output (rebuilt by build.py / CI on deploy)
+/public/
+
 # OS / editor noise
 .DS_Store
 *.swp
