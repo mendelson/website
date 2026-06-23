@@ -5,20 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{TITLE}}</title>
   <meta name="description" content="{{DESC}}">
-  <link rel="canonical" href="https://mmendelson.com{{URL}}">
+  <link rel="canonical" href="{{SITE}}{{URL}}">
   <meta property="og:title" content="{{TITLE}}">
   <meta property="og:description" content="{{DESC}}">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://mmendelson.com{{URL}}">
-  <link rel="icon" type="image/png" href="/assets/images/cropped-logomendi-favicon.png">
-  <link rel="apple-touch-icon" href="/assets/images/cropped-logomendi-favicon.png">
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <meta property="og:url" content="{{SITE}}{{URL}}">
+  <link rel="icon" type="image/png" href="{{BASE}}/assets/images/cropped-logomendi-favicon.png">
+  <link rel="apple-touch-icon" href="{{BASE}}/assets/images/cropped-logomendi-favicon.png">
+  <link rel="stylesheet" href="{{BASE}}/assets/css/style.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="/">Mateus Mendelson</a>
+      <a class="brand" href="{{BASE}}/">Mateus Mendelson</a>
       <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="primary-nav">
         <span></span><span></span><span></span>
       </button>
@@ -44,6 +44,6 @@
     </div>
   </footer>
 
-  <script src="/assets/js/main.js"></script>
+  <script src="{{BASE}}/assets/js/main.js"></script>
 </body>
 </html>

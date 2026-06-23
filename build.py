@@ -18,7 +18,22 @@ TEMPLATES = os.path.join(ROOT, "templates")
 ASSETS = os.path.join(ROOT, "assets")
 OUT = os.path.join(ROOT, "public")
 
-SITE_URL = "https://mmendelson.com"
+# --------------------------------------------------------------------------
+# Hosting configuration.
+#   CUSTOM_DOMAIN — set to e.g. "mmendelson.com" once the domain's DNS points
+#                   at GitHub Pages.  While empty, the site is built for the
+#                   GitHub Pages project URL (mendelson.github.io/website),
+#                   so all in-site links are prefixed with BASE.
+# --------------------------------------------------------------------------
+CUSTOM_DOMAIN = ""
+
+if CUSTOM_DOMAIN:
+    BASE = ""
+    SITE_URL = "https://" + CUSTOM_DOMAIN
+else:
+    BASE = "/website"
+    SITE_URL = "https://mendelson.github.io/website"
+
 YEAR = datetime.date.today().year
 
 # --------------------------------------------------------------------------
@@ -105,6 +120,16 @@ def rewrite_internal_links(html):
     return re.sub(r'https?://(?:www\.)?mmendelson\.com(/[^"\'\s)]*)?', r'\1', html)
 
 
+def add_base(html):
+    """Prefix root-relative href/src URLs with the site base path.
+
+    Protocol-relative URLs (//host/...) are left untouched.
+    """
+    if not BASE:
+        return html
+    return re.sub(r'(href|src)="/(?!/)', r'\1="' + BASE + '/', html)
+
+
 def build_nav(current_url):
     items = []
     for label, url, children in NAV:
@@ -113,15 +138,15 @@ def build_nav(current_url):
         if children:
             sub = "".join(
                 '<li><a href="{}"{}>{}</a></li>'.format(
-                    cu, ' class="active"' if cu == current_url else "", cl)
+                    BASE + cu, ' class="active"' if cu == current_url else "", cl)
                 for cl, cu in children)
             items.append(
                 '<li class="has-children"><a href="{}" class="{}">{}</a>'
                 '<ul class="submenu">{}</ul></li>'.format(
-                    url, ("active" if active else "").strip(), label, sub))
+                    BASE + url, ("active" if active else "").strip(), label, sub))
         else:
             items.append('<li><a href="{}"{}>{}</a></li>'.format(
-                url, ' class="active"' if active else "", label))
+                BASE + url, ' class="active"' if active else "", label))
     return "<ul>" + "".join(items) + "</ul>"
 
 
@@ -137,7 +162,7 @@ def build_social():
 
 
 def render_page(template, slug, url, title, h1, desc):
-    body = rewrite_internal_links(read(os.path.join(CONTENT, slug + ".html")))
+    body = add_base(rewrite_internal_links(read(os.path.join(CONTENT, slug + ".html"))))
     h1_html = '<h1 class="page-title">{}</h1>'.format(h1) if h1 else ""
     # The template ships a default page-title; replace the whole block.
     page = template.replace(
@@ -145,6 +170,8 @@ def render_page(template, slug, url, title, h1, desc):
     page = (page
             .replace("{{TITLE}}", title)
             .replace("{{DESC}}", desc)
+            .replace("{{SITE}}", SITE_URL)
+            .replace("{{BASE}}", BASE)
             .replace("{{URL}}", url)
             .replace("{{NAV}}", build_nav(url))
             .replace("{{CONTENT}}", body)
@@ -166,17 +193,18 @@ def write_file(path, content):
 
 
 def redirect_html(target):
+    link = BASE + target
     return (
         '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
         '<title>Redirecting…</title>'
         '<link rel="canonical" href="{site}{t}">'
-        '<meta http-equiv="refresh" content="0; url={t}">'
+        '<meta http-equiv="refresh" content="0; url={link}">'
         '<meta name="robots" content="noindex">'
         '</head><body>'
-        '<p>This page has moved. <a href="{t}">Click here</a> if you are not '
+        '<p>This page has moved. <a href="{link}">Click here</a> if you are not '
         'redirected automatically.</p>'
-        '<script>location.replace("{t}");</script>'
-        '</body></html>'.format(site=SITE_URL, t=target))
+        '<script>location.replace("{link}");</script>'
+        '</body></html>'.format(site=SITE_URL, t=target, link=link))
 
 
 def main():
@@ -209,11 +237,13 @@ def main():
                              '<h1 class="page-title">Page not found</h1>')
                     .replace("{{TITLE}}", "Page not found — Mateus Mendelson")
                     .replace("{{DESC}}", "The page you are looking for does not exist.")
+                    .replace("{{SITE}}", SITE_URL)
+                    .replace("{{BASE}}", BASE)
                     .replace("{{URL}}", "/404.html")
                     .replace("{{NAV}}", build_nav("/404.html"))
                     .replace("{{CONTENT}}",
                              '<p>Sorry, the page you are looking for does not exist. '
-                             'Try the <a href="/">home page</a>.</p>')
+                             'Try the <a href="{}/">home page</a>.</p>'.format(BASE))
                     .replace("{{SOCIAL}}", build_social())
                     .replace("{{YEAR}}", str(YEAR)))
     write_file(os.path.join(OUT, "404.html"), notfound)
@@ -223,8 +253,10 @@ def main():
     shutil.copytree(ASSETS, os.path.join(OUT, "assets"))
     print("copied  assets/")
 
-    # CNAME (custom domain for GitHub Pages)
-    write_file(os.path.join(OUT, "CNAME"), "mmendelson.com\n")
+    # CNAME (only when a custom domain is configured; otherwise a CNAME file
+    # would make GitHub Pages redirect the project URL to the custom domain).
+    if CUSTOM_DOMAIN:
+        write_file(os.path.join(OUT, "CNAME"), CUSTOM_DOMAIN + "\n")
 
     # robots.txt + sitemap.xml
     write_file(os.path.join(OUT, "robots.txt"),
@@ -237,7 +269,7 @@ def main():
                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                + urls + "</urlset>\n")
     write_file(os.path.join(OUT, "sitemap.xml"), sitemap)
-    print("wrote   sitemap.xml, robots.txt, CNAME")
+    print("wrote   sitemap.xml, robots.txt" + (", CNAME" if CUSTOM_DOMAIN else ""))
 
     print("\nDone. Output in", OUT)
 

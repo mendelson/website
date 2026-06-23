@@ -57,8 +57,16 @@ See [`ASSETS_NEEDED.md`](ASSETS_NEEDED.md) for the full list and source URLs.
 ### GitHub Pages (configured)
 `.github/workflows/deploy.yml` builds the site and publishes it on every push to
 `main`. Enable it once under **Settings → Pages → Build and deployment →
-Source: GitHub Actions**. The custom domain is set via `public/CNAME`
-(`mmendelson.com`); point the domain's DNS at GitHub Pages.
+Source: GitHub Actions**.
+
+The site is served from the project URL `https://mendelson.github.io/website/`,
+so every in-site link is prefixed with the base path `/website`. This is driven
+by the `CUSTOM_DOMAIN` setting near the top of `build.py`:
+
+- `CUSTOM_DOMAIN = ""` → builds for `mendelson.github.io/website` (`BASE = "/website"`,
+  no `CNAME`).
+- `CUSTOM_DOMAIN = "mmendelson.com"` → builds for the apex domain (`BASE = ""`,
+  emits `CNAME`). Set this once the domain's DNS points at GitHub Pages.
 
 ### Cloudflare Pages / Netlify (alternative)
 - Build command: `python3 build.py`
