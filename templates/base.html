@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}}</title>
+  <meta name="description" content="{{DESC}}">
+  <link rel="canonical" href="https://mmendelson.com{{URL}}">
+  <meta property="og:title" content="{{TITLE}}">
+  <meta property="og:description" content="{{DESC}}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://mmendelson.com{{URL}}">
+  <link rel="icon" type="image/png" href="/assets/images/cropped-logomendi-favicon.png">
+  <link rel="apple-touch-icon" href="/assets/images/cropped-logomendi-favicon.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/">Mateus Mendelson</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="primary-nav">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+        {{NAV}}
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    <article class="page">
+      <h1 class="page-title">{{H1}}</h1>
+      {{CONTENT}}
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="social">
+        {{SOCIAL}}
+      </div>
+      <p class="copyright">&copy; {{YEAR}} Mateus Mendelson</p>
+    </div>
+  </footer>
+
+  <script src="/assets/js/main.js"></script>
+</body>
+</html>

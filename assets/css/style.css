@@ -1,0 +1,267 @@
+/* ============================================================
+   Mateus Mendelson — personal website
+   ============================================================ */
+:root {
+  --bg: #ffffff;
+  --bg-alt: #f5f7fa;
+  --text: #1f2933;
+  --muted: #52606d;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --border: #e2e8f0;
+  --header-bg: #0f172a;
+  --header-text: #f8fafc;
+  --max-width: 980px;
+  --radius: 8px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-dark); text-decoration: underline; }
+
+img { max-width: 100%; height: auto; }
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2rem 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--accent);
+  color: #fff;
+  padding: .5rem 1rem;
+  z-index: 200;
+}
+.skip-link:focus { left: 0; }
+
+/* ---------- Header / Nav ---------- */
+.site-header {
+  background: var(--header-bg);
+  color: var(--header-text);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+}
+.brand {
+  color: var(--header-text);
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: .2px;
+}
+.brand:hover { color: #fff; text-decoration: none; }
+
+.primary-nav ul {
+  list-style: none;
+  display: flex;
+  gap: .25rem;
+  margin: 0;
+  padding: 0;
+}
+.primary-nav li { position: relative; }
+.primary-nav a {
+  display: block;
+  color: var(--header-text);
+  padding: .65rem .85rem;
+  border-radius: 6px;
+  font-size: .95rem;
+}
+.primary-nav a:hover,
+.primary-nav a.active {
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Dropdowns */
+.primary-nav .has-children > a::after {
+  content: "\25BE";
+  font-size: .7em;
+  margin-left: .35rem;
+  opacity: .8;
+}
+.primary-nav .submenu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  padding: .35rem;
+  flex-direction: column;
+  z-index: 110;
+}
+.primary-nav .has-children:hover .submenu,
+.primary-nav .has-children:focus-within .submenu { display: flex; }
+.primary-nav .submenu a {
+  color: var(--text);
+  padding: .55rem .75rem;
+  white-space: nowrap;
+}
+.primary-nav .submenu a:hover,
+.primary-nav .submenu a.active {
+  background: var(--bg-alt);
+  color: var(--accent-dark);
+}
+
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 8px;
+}
+.nav-toggle span {
+  width: 26px;
+  height: 3px;
+  background: var(--header-text);
+  border-radius: 2px;
+  transition: .25s;
+}
+
+/* ---------- Main / Page ---------- */
+main { min-height: 60vh; padding: 2.5rem 0 3.5rem; }
+.page-title {
+  font-size: 2rem;
+  margin: 0 0 1.5rem;
+  padding-bottom: .75rem;
+  border-bottom: 2px solid var(--border);
+}
+.page h2 { font-size: 1.45rem; margin-top: 2rem; }
+.page h6 { font-size: .95rem; margin: .4rem 0; color: var(--muted); }
+.page ul { padding-left: 1.4rem; }
+.page li { margin: .3rem 0; }
+
+.profile_pic {
+  float: right;
+  border-radius: 50%;
+  margin: 0 0 1rem 1.5rem;
+  width: 220px;
+  height: 220px;
+  object-fit: cover;
+  border: 4px solid var(--bg-alt);
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+
+/* ---------- Gutenberg block compatibility ---------- */
+.wp-block-group { margin: 1.5rem 0; }
+.wp-block-columns {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.wp-block-columns.are-vertically-aligned-center,
+.wp-block-column.is-vertically-aligned-center { align-items: center; }
+.wp-block-column { flex: 1 1 0; min-width: 0; }
+.has-text-align-center { text-align: center; }
+.wp-block-image { margin: 0; }
+.wp-block-image img { border-radius: 6px; }
+.wp-block-quote {
+  border-left: 4px solid var(--accent);
+  margin: 0;
+  padding: .25rem 0 .25rem 1.25rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.wp-block-separator {
+  max-width: 100%;
+  border-top: 1px solid var(--border);
+}
+.wp-block-separator.is-style-wide { margin: 2.5rem 0; }
+
+/* ---------- Tracker tool ---------- */
+#garminTrackerDataField { margin-top: 1.5rem; }
+
+/* ---------- Footer ---------- */
+.site-footer {
+  background: var(--header-bg);
+  color: var(--header-text);
+  padding: 2rem 0;
+  margin-top: auto;
+}
+.footer-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.social {
+  display: flex;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.social a {
+  color: var(--header-text);
+  opacity: .85;
+  display: inline-flex;
+  transition: opacity .2s, transform .2s;
+}
+.social a:hover { opacity: 1; transform: translateY(-2px); }
+.social svg { width: 24px; height: 24px; fill: currentColor; }
+.copyright { margin: 0; font-size: .85rem; opacity: .7; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .nav-toggle { display: flex; }
+  .primary-nav {
+    display: none;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    background: var(--header-bg);
+    border-top: 1px solid rgba(255,255,255,.1);
+    padding: .5rem 1rem 1rem;
+  }
+  .primary-nav.open { display: block; }
+  .primary-nav ul { flex-direction: column; gap: 0; }
+  .primary-nav .submenu {
+    display: flex;
+    position: static;
+    box-shadow: none;
+    border: none;
+    background: rgba(255,255,255,.05);
+    padding-left: 1rem;
+  }
+  .primary-nav .submenu a { color: var(--header-text); }
+  .primary-nav .has-children > a::after { content: ""; }
+  .profile_pic { float: none; display: block; margin: 0 auto 1.5rem; }
+  .wp-block-columns { flex-direction: column; }
+}
