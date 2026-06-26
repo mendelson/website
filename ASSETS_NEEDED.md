@@ -17,6 +17,9 @@ the files manually into the paths below, then run `python3 build.py`.
 - `1002549251.jpg` — https://mmendelson.com/wp-content/uploads/2025/12/1002549251.jpg
 - `1002549254.png` — https://mmendelson.com/wp-content/uploads/2025/12/1002549254.png
 - `cropped-logomendi-favicon.png` — https://mmendelson.com/wp-content/uploads/2020/02/cropped-logomendi-favicon.png
+- `cropped-logomendi-favicon-32x32.png` — https://mmendelson.com/wp-content/uploads/2020/02/cropped-logomendi-favicon-32x32.png
+- `cropped-logomendi-favicon-192x192.png` — https://mmendelson.com/wp-content/uploads/2020/02/cropped-logomendi-favicon-192x192.png
+- `cropped-logomendi-favicon-180x180.png` — https://mmendelson.com/wp-content/uploads/2020/02/cropped-logomendi-favicon-180x180.png
 - `cropped-profile_01_cut_portrait-1.png` — https://mmendelson.com/wp-content/uploads/2018/07/cropped-profile_01_cut_portrait-1.png
 
 ## PDFs (`assets/files/`)
