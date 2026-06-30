@@ -72,15 +72,64 @@ by the `CUSTOM_DOMAIN` setting near the top of `build.py`:
 - Build command: `python3 build.py`
 - Output directory: `public`
 
+## URL structure & redirects
+
+URLs and redirects mirror the old WordPress site 1:1. The source of truth is
+`PAGES` and `REDIRECTS` in `build.py`; the tables below are the human-readable
+summary. (All in-site paths are served under the base path — `/website/…` on
+GitHub Pages, `/…` on the apex domain.)
+
+### Pages (render content)
+
+| URL | Page |
+|---|---|
+| `/` | Home |
+| `/teaching/` | Teaching |
+| `/teaching/fga/` | University of Brasília – Gama |
+| `/teaching/university-center-iesb/` | IESB |
+| `/teaching/projecao/` | Projeção |
+| `/publications/` | Publications |
+| `/extra-resources/` | Extra resources |
+| `/off/` | Side projects |
+| `/off/music-sheets/` | Music Sheets |
+| `/off/a-coxinha/` | A Coxinha |
+| `/cv/` | CV |
+| `/tracker/` | Garmin Tracker (live companion) |
+
+### Redirects that land on a page
+
+| Destination page | Redirecting paths |
+|---|---|
+| `/` | `/i/`, `/inicio/` |
+| `/teaching/` | `/t/`, `/teach/` |
+| `/teaching/fga/` | `/f/`, `/fga/` |
+| `/teaching/university-center-iesb/` | `/u/`, `/uni/`, `/university/`, `/university-center-iesb/` |
+| `/teaching/projecao/` | `/projecao/` |
+| `/publications/` | `/pub/`, `/publication/` |
+| `/extra-resources/` | `/e/`, `/extra/` |
+| `/off/` | `/o/` |
+| `/off/music-sheets/` | `/m/`, `/music/`, `/music-sheets/` |
+| `/off/a-coxinha/` | `/a/`, `/a-coxinha/` |
+| `/tracker/` | `/track/`, `/tracker-data/`, `/tracker-data-field/` |
+
+### Redirects that go off-site
+
+| Destination | Redirecting paths |
+|---|---|
+| `apps.mmendelson.com` | `/garmin-apps/`, `/garmin/`, `/g/` |
+| `run.mmendelson.com` | `/off/run/`, `/run/`, `/r/` |
+| `run.mmendelson.com/gallery` | `/off/running-gallery/` |
+| `open.spotify.com/show/…` (Byte Papo) | `/off/byte-papo/`, `/byte-papo/`, `/b/` |
+| `taggo.one/mmendelson` (contact card) | `/contact/`, `/c/`, `/findme/`, `/contato/` |
+| `kiezelpay.com/…` (Garmin app pricing) | `/garmin-pricing/` |
+| `api.mmendelson.com/pair` | `/pair/` |
+
+> Some short aliases reach an off-site destination through one in-site hop
+> (e.g. `/g/` → `/garmin-apps/` → `apps.mmendelson.com`); the tables show the
+> final destination.
+
 ## Notes / known gaps
 
-- **Links & redirects mirror the original site 1:1.** Pages live at the same
-  canonical (nested) URLs as the old WordPress site — e.g. `/teaching/fga/`,
-  `/off/music-sheets/` — and the flat slugs (`/fga/`, `/music-sheets/`, …) 301
-  to them. Menu items that bounced off-site on the original keep their own URL
-  but redirect out: `/garmin-apps/` → `apps.mmendelson.com`, `/off/run/` →
-  `run.mmendelson.com`, `/off/byte-papo/` → Spotify, `/contact/` →
-  `taggo.one/mmendelson`. See `REDIRECTS` in `build.py` for the full map.
 - Dropdown parents (Teaching, Side projects) only reveal their submenu — they
   do not navigate to a page.
 - `/tracker/` is the live Garmin Tracker Data Field companion: it reads a
