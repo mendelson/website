@@ -292,3 +292,22 @@ main { min-height: 60vh; padding: 2.5rem 0 3.5rem; }
   .profile_pic { float: none; display: block; margin: 0 auto 1.5rem; }
   .wp-block-columns { flex-direction: column; }
 }
+
+/* ---------- Garmin Tracker output ---------- */
+#garminTrackerDataField {
+  max-width: 600px;
+  margin: 1.5em auto 0;
+  padding: 0 1em;
+}
+#garminTrackerDataField .loading,
+#garminTrackerDataField .error { font-size: .95rem; }
+#garminTrackerDataField .error { color: #b91c1c; }
+#garminTrackerDataField dl {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) 1fr;
+  gap: .25rem .9rem;
+  margin: .4rem 0;
+}
+#garminTrackerDataField dt { font-weight: 600; color: var(--muted); }
+#garminTrackerDataField dd { margin: 0; }
+#garminTrackerDataField hr { margin: 1rem 0; }

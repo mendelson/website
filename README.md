@@ -83,6 +83,7 @@ by the `CUSTOM_DOMAIN` setting near the top of `build.py`:
   `taggo.one/mmendelson`. See `REDIRECTS` in `build.py` for the full map.
 - Dropdown parents (Teaching, Side projects) only reveal their submenu — they
   do not navigate to a page.
-- `/tracker/` keeps the original UI of the Garmin Tracker Data Field companion,
-  but the live-data lookup requires the backend service that powered it on
-  WordPress. The UI is preserved; wiring it to a backend is a follow-up.
+- `/tracker/` is the live Garmin Tracker Data Field companion: it reads a
+  `trackId` from the URL (`?trackId=…`) or the input, queries the original
+  Google Apps Script backend, renders the latest records and auto-refreshes
+  every 5 minutes (see `assets/js/tracker.js`).
