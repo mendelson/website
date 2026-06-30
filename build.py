@@ -124,7 +124,32 @@ REDIRECTS = {
     "/garmin-pricing/": "https://kiezelpay.com/code/?s=6B55524C-B713-A5B0-5C41-2D9341952181&dsu=2277156&p=69899-65105-76769-67043-67044-67046-65066-63790-66655-76730-69886&platform=garmin",
     "/pair/": "https://api.mmendelson.com/pair",
     "/tracker-data-field/": "/tracker/",
+    "/tracker-data/": "/tracker-data-field/",
     "/inicio/": "/",
+    # Short aliases the original 301s to a page (single-letter and word
+    # shortcuts; targets mirror the original exactly and may chain on from
+    # there, e.g. /g/ -> /garmin-apps/ -> apps.mmendelson.com).
+    "/a/": "/off/a-coxinha/",
+    "/b/": "/off/byte-papo/",
+    "/c/": "/contact/",
+    "/e/": "/extra-resources/",
+    "/f/": "/teaching/fga/",
+    "/g/": "/garmin-apps/",
+    "/i/": "/",
+    "/m/": "/off/music-sheets/",
+    "/o/": "/off/",
+    "/r/": "/off/run/",
+    "/t/": "/teaching/",
+    "/u/": "/teaching/university-center-iesb/",
+    "/garmin/": "/garmin-apps/",
+    "/music/": "/off/music-sheets/",
+    "/teach/": "/teaching/",
+    "/track/": "/tracker/",
+    "/pub/": "/publications/",
+    "/publication/": "/publications/",
+    "/extra/": "/extra-resources/",
+    "/uni/": "/teaching/university-center-iesb/",
+    "/university/": "/teaching/university-center-iesb/",
 }
 
 
