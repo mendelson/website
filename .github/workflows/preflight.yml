@@ -1,0 +1,89 @@
+name: Migration preflight checks
+
+# Diagnostic-only workflow for the WordPress -> GitHub Pages cutover.
+# Runs on the migration branch, never deploys anything. Safe to delete
+# after the migration is complete.
+
+on:
+  push:
+    branches: ["claude/mmendelson-wordpress-migration-au4zkp"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-state:
+    name: Live DNS + HTTP state
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS state of mmendelson.com
+        run: |
+          echo "=== apex A records (with TTL) ==="
+          dig +noall +answer mmendelson.com A || true
+          echo "=== apex AAAA ==="
+          dig +noall +answer mmendelson.com AAAA || true
+          echo "=== www ==="
+          dig +noall +answer www.mmendelson.com A www.mmendelson.com CNAME || true
+          echo "=== nameservers ==="
+          dig +noall +answer mmendelson.com NS || true
+          echo "=== GitHub Pages target for reference ==="
+          dig +noall +answer mendelson.github.io A || true
+          echo "=== subdomains used by redirects ==="
+          dig +noall +answer apps.mmendelson.com A apps.mmendelson.com CNAME || true
+          dig +noall +answer run.mmendelson.com A run.mmendelson.com CNAME || true
+          dig +noall +answer api.mmendelson.com A api.mmendelson.com CNAME || true
+
+      - name: What is serving mmendelson.com right now
+        run: |
+          echo "=== response headers (apex) ==="
+          curl -sSIL --max-time 20 https://mmendelson.com/ | sed 's/^/  /' || true
+          echo "=== WordPress markers in homepage ==="
+          curl -sSL --max-time 20 https://mmendelson.com/ \
+            | grep -oiE 'wp-content|wp-includes|generator" content="[^"]*' \
+            | sort | uniq -c | sort -rn | head -10 || echo "  (no WordPress markers found)"
+
+      - name: Health of the GitHub Pages site
+        run: |
+          echo "=== project URL ==="
+          curl -sSI --max-time 20 https://mendelson.github.io/website/ | sed 's/^/  /' || true
+          echo "=== spot-check pages on the Pages deployment ==="
+          for p in / /teaching/ /publications/ /cv/ /tracker/ /uni/ /extra/; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://mendelson.github.io/website${p}") || code=ERR
+            echo "  ${code}  /website${p}"
+          done
+
+  cutover-build:
+    name: Validate the cutover build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build with CUSTOM_DOMAIN
+        run: python3 build.py
+      - name: Assert cutover invariants
+        run: |
+          set -e
+          echo "=== CNAME file ==="
+          test "$(cat public/CNAME)" = "mmendelson.com" && echo "  OK: CNAME=mmendelson.com"
+          echo "=== no /website/ base path leftovers ==="
+          if grep -rn '"/website/' public/; then
+            echo "  FAIL: leftover project base path"; exit 1
+          fi
+          echo "  OK: none"
+          echo "=== canonical host in robots/sitemap ==="
+          grep -q 'https://mmendelson.com/sitemap.xml' public/robots.txt
+          ! grep -q 'github.io' public/sitemap.xml
+          echo "  OK: apex canonical everywhere"
+          echo "=== every registered page produced an index.html ==="
+          python3 - <<'EOF'
+          import build, os, sys
+          missing = [u for _, u, *_ in build.PAGES
+                     if not os.path.exists(os.path.join('public', u.lstrip('/'), 'index.html'))
+                     and not (u == '/' and os.path.exists('public/index.html'))]
+          if missing:
+              print('  FAIL:', missing); sys.exit(1)
+          print('  OK:', len(build.PAGES), 'pages present')
+          EOF
