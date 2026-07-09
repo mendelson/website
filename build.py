@@ -25,7 +25,7 @@ OUT = os.path.join(ROOT, "public")
 #                   GitHub Pages project URL (mendelson.github.io/website),
 #                   so all in-site links are prefixed with BASE.
 # --------------------------------------------------------------------------
-CUSTOM_DOMAIN = ""
+CUSTOM_DOMAIN = "mmendelson.com"
 
 if CUSTOM_DOMAIN:
     BASE = ""
