@@ -24,7 +24,8 @@ jobs:
           GH_IPS="185.199.108.153 185.199.109.153 185.199.110.153 185.199.111.153"
 
           # -- 1. GitHub domain-verification TXT record ---------------------
-          txt=$(dig +short TXT "_github-pages-challenge-mendelson.${DOMAIN}" | head -1)
+          # real TXT values are returned in double quotes; a wildcard CNAME is not
+          txt=$(dig +short TXT "_github-pages-challenge-mendelson.${DOMAIN}" | grep '"' | head -1)
           if [ -n "$txt" ]; then s1="DONE   (TXT record found: $txt)"
           else s1="NOT YET (no TXT record at _github-pages-challenge-mendelson.${DOMAIN})"; fi
 
