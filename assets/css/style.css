@@ -135,6 +135,13 @@ hr {
 /* Submenus are closed by default and only open via the .open class
    (click/tap/keyboard) or, on pointer devices, on hover/focus. */
 .primary-nav .has-children.open > .submenu { display: flex; }
+/* The last item sits at the right edge of the header: open its panel
+   right-aligned so it can't overflow the viewport and force a
+   horizontal scroll (which shifted the whole page sideways). */
+.primary-nav > ul > li:last-child > .submenu {
+  left: auto;
+  right: 0;
+}
 .primary-nav .submenu a {
   color: var(--text);
   padding: .55rem .75rem;
