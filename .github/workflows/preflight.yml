@@ -1,0 +1,119 @@
+name: Migration preflight checks
+
+# Diagnostic-only workflow for the WordPress -> GitHub Pages cutover.
+# It never deploys anything. It prints a plain-English progress report:
+# re-run it after each migration step to confirm the step worked.
+# Safe to delete after the migration is complete.
+
+on:
+  push:
+    branches: ["claude/mmendelson-wordpress-migration-au4zkp"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  progress-report:
+    name: Cutover progress report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check every migration step
+        run: |
+          DOMAIN="mmendelson.com"
+          GH_IPS="185.199.108.153 185.199.109.153 185.199.110.153 185.199.111.153"
+
+          # -- 1. GitHub domain-verification TXT record ---------------------
+          # real TXT values are returned in double quotes; a wildcard CNAME is not
+          txt=$(dig +short TXT "_github-pages-challenge-mendelson.${DOMAIN}" | grep '"' | head -1)
+          if [ -n "$txt" ]; then s1="DONE   (TXT record found: $txt)"
+          else s1="NOT YET (no TXT record at _github-pages-challenge-mendelson.${DOMAIN})"; fi
+
+          # -- 2. Apex A records point at GitHub Pages ----------------------
+          apex=$(dig +short "$DOMAIN" A | sort | tr '\n' ' ')
+          on_github=true
+          for ip in $GH_IPS; do echo "$apex" | grep -q "$ip" || on_github=false; done
+          if $on_github; then s2="DONE   (apex resolves to the four GitHub Pages IPs)"
+          else s2="NOT YET (apex currently resolves to: ${apex:-nothing} - still the old host)"; fi
+
+          # -- 3. www record -------------------------------------------------
+          www=$(dig +short "www.${DOMAIN}" CNAME | head -1)
+          s3="www is a CNAME to: ${www:-<none / A record>}"
+
+          # -- 4. Who is actually serving https://mmendelson.com ------------
+          page=$(curl -sSL --max-time 20 "https://${DOMAIN}/" 2>/dev/null || true)
+          hdr=$(curl -sSI --max-time 20 "https://${DOMAIN}/" 2>/dev/null || true)
+          if echo "$page" | grep -q "wp-content"; then
+            s4="WORDPRESS is serving the domain (old site still live)"
+          elif echo "$hdr" | grep -qi "server: GitHub.com"; then
+            s4="GITHUB PAGES is serving the domain (new site is live!)"
+          elif [ -z "$hdr" ]; then
+            s4="UNREACHABLE (could not connect - if you just changed DNS, wait 10 min and re-run)"
+          else
+            s4="UNKNOWN (neither WordPress nor GitHub markers found - inspect manually)"
+          fi
+
+          # -- 5. HTTPS certificate is valid for the domain ------------------
+          if curl -sSI --max-time 20 "https://${DOMAIN}/" >/dev/null 2>&1; then
+            s5="VALID  (HTTPS works with no certificate errors)"
+          else
+            err=$(curl -sSI --max-time 20 "https://${DOMAIN}/" 2>&1 >/dev/null | head -1)
+            s5="PROBLEM (${err:-no HTTPS response}) - if mid-cutover, the GitHub certificate may still be provisioning"
+          fi
+
+          # -- 6. Spot-check real pages on whichever host is live -----------
+          if $on_github; then base="https://${DOMAIN}"; else base="https://mendelson.github.io/website"; fi
+          s6=""
+          for p in / /teaching/ /publications/ /cv/ /tracker/ /uni/ /extra/; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "${base}${p}" || echo ERR)
+            s6="${s6}\n         ${code}  ${base}${p}"
+          done
+
+          echo "=================================================================="
+          echo "                CUTOVER PROGRESS REPORT  ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+          echo "=================================================================="
+          echo "  [1] GitHub domain verification .... $s1"
+          echo "  [2] DNS points at GitHub Pages .... $s2"
+          echo "  [3] www record ..................... $s3"
+          echo "  [4] Who serves the domain ......... $s4"
+          echo "  [5] HTTPS certificate ............. $s5"
+          printf "  [6] Page spot-checks (200 = good):$s6\n"
+          echo "=================================================================="
+          echo "  Migration is COMPLETE when: [2] DONE, [4] GITHUB PAGES,"
+          echo "  [5] VALID, and every line of [6] is 200."
+          echo "=================================================================="
+
+  cutover-build:
+    name: Validate the cutover build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build with CUSTOM_DOMAIN
+        run: python3 build.py
+      - name: Assert cutover invariants
+        run: |
+          set -e
+          echo "=== CNAME file ==="
+          test "$(cat public/CNAME)" = "mmendelson.com" && echo "  OK: CNAME=mmendelson.com"
+          echo "=== no /website/ base path leftovers ==="
+          if grep -rn '"/website/' public/; then
+            echo "  FAIL: leftover project base path"; exit 1
+          fi
+          echo "  OK: none"
+          echo "=== canonical host in robots/sitemap ==="
+          grep -q 'https://mmendelson.com/sitemap.xml' public/robots.txt
+          ! grep -q 'github.io' public/sitemap.xml
+          echo "  OK: apex canonical everywhere"
+          echo "=== every registered page produced an index.html ==="
+          python3 - <<'EOF'
+          import build, os, sys
+          missing = [u for _, u, *_ in build.PAGES
+                     if not os.path.exists(os.path.join('public', u.lstrip('/'), 'index.html'))
+                     and not (u == '/' and os.path.exists('public/index.html'))]
+          if missing:
+              print('  FAIL:', missing); sys.exit(1)
+          print('  OK:', len(build.PAGES), 'pages present')
+          EOF
