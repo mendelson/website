@@ -1,8 +1,9 @@
 name: Migration preflight checks
 
 # Diagnostic-only workflow for the WordPress -> GitHub Pages cutover.
-# Runs on the migration branch, never deploys anything. Safe to delete
-# after the migration is complete.
+# It never deploys anything. It prints a plain-English progress report:
+# re-run it after each migration step to confirm the step worked.
+# Safe to delete after the migration is complete.
 
 on:
   push:
@@ -13,45 +14,73 @@ permissions:
   contents: read
 
 jobs:
-  live-state:
-    name: Live DNS + HTTP state
+  progress-report:
+    name: Cutover progress report
     runs-on: ubuntu-latest
     steps:
-      - name: DNS state of mmendelson.com
+      - name: Check every migration step
         run: |
-          echo "=== apex A records (with TTL) ==="
-          dig +noall +answer mmendelson.com A || true
-          echo "=== apex AAAA ==="
-          dig +noall +answer mmendelson.com AAAA || true
-          echo "=== www ==="
-          dig +noall +answer www.mmendelson.com A www.mmendelson.com CNAME || true
-          echo "=== nameservers ==="
-          dig +noall +answer mmendelson.com NS || true
-          echo "=== GitHub Pages target for reference ==="
-          dig +noall +answer mendelson.github.io A || true
-          echo "=== subdomains used by redirects ==="
-          dig +noall +answer apps.mmendelson.com A apps.mmendelson.com CNAME || true
-          dig +noall +answer run.mmendelson.com A run.mmendelson.com CNAME || true
-          dig +noall +answer api.mmendelson.com A api.mmendelson.com CNAME || true
+          DOMAIN="mmendelson.com"
+          GH_IPS="185.199.108.153 185.199.109.153 185.199.110.153 185.199.111.153"
 
-      - name: What is serving mmendelson.com right now
-        run: |
-          echo "=== response headers (apex) ==="
-          curl -sSIL --max-time 20 https://mmendelson.com/ | sed 's/^/  /' || true
-          echo "=== WordPress markers in homepage ==="
-          curl -sSL --max-time 20 https://mmendelson.com/ \
-            | grep -oiE 'wp-content|wp-includes|generator" content="[^"]*' \
-            | sort | uniq -c | sort -rn | head -10 || echo "  (no WordPress markers found)"
+          # -- 1. GitHub domain-verification TXT record ---------------------
+          txt=$(dig +short TXT "_github-pages-challenge-mendelson.${DOMAIN}" | head -1)
+          if [ -n "$txt" ]; then s1="DONE   (TXT record found: $txt)"
+          else s1="NOT YET (no TXT record at _github-pages-challenge-mendelson.${DOMAIN})"; fi
 
-      - name: Health of the GitHub Pages site
-        run: |
-          echo "=== project URL ==="
-          curl -sSI --max-time 20 https://mendelson.github.io/website/ | sed 's/^/  /' || true
-          echo "=== spot-check pages on the Pages deployment ==="
+          # -- 2. Apex A records point at GitHub Pages ----------------------
+          apex=$(dig +short "$DOMAIN" A | sort | tr '\n' ' ')
+          on_github=true
+          for ip in $GH_IPS; do echo "$apex" | grep -q "$ip" || on_github=false; done
+          if $on_github; then s2="DONE   (apex resolves to the four GitHub Pages IPs)"
+          else s2="NOT YET (apex currently resolves to: ${apex:-nothing} - still the old host)"; fi
+
+          # -- 3. www record -------------------------------------------------
+          www=$(dig +short "www.${DOMAIN}" CNAME | head -1)
+          s3="www is a CNAME to: ${www:-<none / A record>}"
+
+          # -- 4. Who is actually serving https://mmendelson.com ------------
+          page=$(curl -sSL --max-time 20 "https://${DOMAIN}/" 2>/dev/null || true)
+          hdr=$(curl -sSI --max-time 20 "https://${DOMAIN}/" 2>/dev/null || true)
+          if echo "$page" | grep -q "wp-content"; then
+            s4="WORDPRESS is serving the domain (old site still live)"
+          elif echo "$hdr" | grep -qi "server: GitHub.com"; then
+            s4="GITHUB PAGES is serving the domain (new site is live!)"
+          elif [ -z "$hdr" ]; then
+            s4="UNREACHABLE (could not connect - if you just changed DNS, wait 10 min and re-run)"
+          else
+            s4="UNKNOWN (neither WordPress nor GitHub markers found - inspect manually)"
+          fi
+
+          # -- 5. HTTPS certificate is valid for the domain ------------------
+          if curl -sSI --max-time 20 "https://${DOMAIN}/" >/dev/null 2>&1; then
+            s5="VALID  (HTTPS works with no certificate errors)"
+          else
+            err=$(curl -sSI --max-time 20 "https://${DOMAIN}/" 2>&1 >/dev/null | head -1)
+            s5="PROBLEM (${err:-no HTTPS response}) - if mid-cutover, the GitHub certificate may still be provisioning"
+          fi
+
+          # -- 6. Spot-check real pages on whichever host is live -----------
+          if $on_github; then base="https://${DOMAIN}"; else base="https://mendelson.github.io/website"; fi
+          s6=""
           for p in / /teaching/ /publications/ /cv/ /tracker/ /uni/ /extra/; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://mendelson.github.io/website${p}") || code=ERR
-            echo "  ${code}  /website${p}"
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "${base}${p}" || echo ERR)
+            s6="${s6}\n         ${code}  ${base}${p}"
           done
+
+          echo "=================================================================="
+          echo "                CUTOVER PROGRESS REPORT  ($(date -u '+%Y-%m-%d %H:%M UTC'))"
+          echo "=================================================================="
+          echo "  [1] GitHub domain verification .... $s1"
+          echo "  [2] DNS points at GitHub Pages .... $s2"
+          echo "  [3] www record ..................... $s3"
+          echo "  [4] Who serves the domain ......... $s4"
+          echo "  [5] HTTPS certificate ............. $s5"
+          printf "  [6] Page spot-checks (200 = good):$s6\n"
+          echo "=================================================================="
+          echo "  Migration is COMPLETE when: [2] DONE, [4] GITHUB PAGES,"
+          echo "  [5] VALID, and every line of [6] is 200."
+          echo "=================================================================="
 
   cutover-build:
     name: Validate the cutover build
