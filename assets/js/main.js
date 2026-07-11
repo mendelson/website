@@ -34,8 +34,14 @@
     });
   });
 
-  // Close any open dropdown when clicking outside of it.
+  // Close the mobile menu and any open dropdown when clicking outside of them.
   document.addEventListener('click', function (e) {
+    if (nav && nav.classList.contains('open') &&
+        !nav.contains(e.target) && e.target !== toggle && !toggle.contains(e.target)) {
+      nav.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+
     if (e.target.closest('.has-children')) return;
     document.querySelectorAll('.primary-nav .has-children.open').forEach(function (li) {
       li.classList.remove('open');
