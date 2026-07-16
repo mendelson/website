@@ -31,12 +31,36 @@ cd public && python3 -m http.server 8000   # then open http://localhost:8000
 
 No third-party packages are required (standard library only).
 
+## Two designs / rollback switch
+
+The repo carries **two complete designs side by side**, selected by the
+`SITE_VERSION` constant near the top of `build.py`:
+
+- `SITE_VERSION = "new"` (default) — the 2026 redesign: a dark-default,
+  IBM Plex, gold-accent hub. Shell `templates/base_new.html`, styles
+  `assets/css/style_new.css`, redesigned page bodies in `content/new/`
+  (home, teaching, publications), and the accordion JS in
+  `assets/js/site_new.js`. Legacy content pages (CV, teaching sub-pages,
+  side projects, music sheets, tracker…) are preserved at their old URLs
+  and wrapped in the new shell.
+- `SITE_VERSION = "legacy"` — the original site, exactly as it shipped:
+  shell `templates/base.html`, styles `assets/css/style.css`, bodies from
+  `content/`.
+
+**To roll back to the previous site**, flip that one constant to `"legacy"`
+and re-run `python3 build.py` (or build once with `SITE_VERSION=legacy
+python3 build.py` to preview without editing the file). Nothing is deleted
+either way — both designs live in the repo.
+
 ## Editing content
 
-- **Text of a page** → edit the matching file in `content/` (plain HTML).
-- **Navigation, page list, redirects, social links** → edit the tables near the
-  top of `build.py` (`PAGES`, `NAV`, `SOCIAL`, `REDIRECTS`).
-- **Look & feel** → `assets/css/style.css`.
+- **Text of a redesign page** → edit the matching file in `content/new/`
+  (home, teaching, publications). Other pages fall back to `content/`.
+- **Text of a legacy page** → edit the matching file in `content/`.
+- **Navigation, page list, redirects, social links** → edit the tables near
+  the top of `build.py` (`PAGES`/`NEW_PAGES`, `NAV`, `SOCIAL`, `REDIRECTS`).
+- **Look & feel** → `assets/css/style_new.css` (new) or
+  `assets/css/style.css` (legacy).
 
 Re-run `python3 build.py` after any change.
 
