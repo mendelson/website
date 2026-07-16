@@ -61,6 +61,16 @@ a:hover{color:var(--accent);text-decoration-color:var(--accent)}
 .serif{font-family:'IBM Plex Serif',serif}
 
 /* --------------------------------------------------------------------------
+   i18n — automatic EN/PT switch by <html lang> (no URL change).
+   Each translatable string ships both languages inline; only the one matching
+   the document language renders. The <head> script sets <html lang> from the
+   browser before first paint, so there is no flash.
+   -------------------------------------------------------------------------- */
+.t > [lang]{display:none}
+html:lang(en) .t > [lang="en"]{display:inline}
+html:lang(pt) .t > [lang="pt"]{display:inline}
+
+/* --------------------------------------------------------------------------
    Shared brand bar
    -------------------------------------------------------------------------- */
 .brandbar{
@@ -115,16 +125,18 @@ a:hover{color:var(--accent);text-decoration-color:var(--accent)}
   display:block;background:var(--bg2);
 }
 
-/* buttons */
-.btn-cv{display:inline-flex;border-radius:6px;overflow:hidden}
-.btn-cv a{
-  display:inline-flex;align-items:center;min-height:44px;
+/* CV button — single gold pill, no language stated. The PT link shows for
+   Portuguese, the English one otherwise (language-switched, same label). */
+.btn-cv{display:inline-flex}
+.btn-cv > .btn-cv-single{display:none}
+html:lang(en) .btn-cv > [lang="en"],
+html:lang(pt) .btn-cv > [lang="pt"]{display:inline-flex}
+.btn-cv-single{
+  align-items:center;min-height:44px;padding:0 20px;border-radius:6px;
   background:var(--accent);color:var(--accent-ink);
   font-weight:600;font-size:14px;text-decoration:none;
 }
-.btn-cv a.btn-cv-en{padding:0 18px}
-.btn-cv a.btn-cv-pt{padding:0 14px;border-left:1px solid color-mix(in oklab, var(--accent-ink) 30%, transparent)}
-.btn-cv a:hover{color:var(--accent-ink);filter:brightness(1.08)}
+.btn-cv-single:hover{color:var(--accent-ink);filter:brightness(1.08)}
 .btn-ghost{
   display:inline-flex;align-items:center;min-height:44px;padding:0 16px;
   border:1px solid var(--line);border-radius:6px;font-size:14px;text-decoration:none;

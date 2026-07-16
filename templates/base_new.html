@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>document.documentElement.lang=/^pt\b/i.test(navigator.language||navigator.userLanguage||'en')?'pt':'en';</script>
   <title>{{TITLE}}</title>
   <meta name="description" content="{{DESC}}">
   <link rel="canonical" href="{{SITE}}{{URL}}">
@@ -10,9 +11,10 @@
   <meta property="og:description" content="{{DESC}}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="{{SITE}}{{URL}}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{{BASE}}/assets/images/cropped-logomendi-favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="{{BASE}}/assets/images/cropped-logomendi-favicon-192x192.png">
-  <link rel="apple-touch-icon" href="{{BASE}}/assets/images/cropped-logomendi-favicon-180x180.png">
+  <link rel="icon" type="image/svg+xml" href="{{BASE}}/assets/images/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{BASE}}/assets/images/favicon-stair-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{BASE}}/assets/images/favicon-stair-192.png">
+  <link rel="apple-touch-icon" href="{{BASE}}/assets/images/favicon-stair-180.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
@@ -25,8 +27,10 @@
     <div class="brandbar-inner">
       <a class="brand-logo" href="{{BASE}}/" aria-label="mmendelson.com — home">
         <svg width="22" height="22" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-          <path d="M6 10h20v15h17" stroke="currentColor" stroke-width="6"></path>
-          <path d="M6 22h9v15h18v-9" stroke="currentColor" stroke-width="6"></path>
+          <g transform="translate(2 0)" stroke="currentColor" stroke-width="4" stroke-linejoin="miter">
+            <path d="M6 7H23V25H38V42"></path>
+            <path d="M6 13H17V30H34V42"></path>
+          </g>
         </svg>
         <span class="brand-word">mmendelson.com</span>
       </a>
@@ -46,7 +50,7 @@
     <div class="footer-inner">
       <div class="foot-contact">
         <a class="foot-email" href="mailto:mendelson.mateus@gmail.com">mendelson.mateus@gmail.com</a>
-        <a class="foot-cardlink" href="https://taggo.one/mmendelson" target="_blank" rel="noopener">Contact card ↗</a>
+        <a class="foot-cardlink" href="https://taggo.one/mmendelson" target="_blank" rel="noopener"><span class="t"><span lang="en">Contact card ↗</span><span lang="pt">Cartão de contato ↗</span></span></a>
       </div>
       <nav class="foot-social" aria-label="Social profiles">
         <a href="https://www.linkedin.com/in/mateusmendelson/" target="_blank" rel="noopener">LinkedIn</a>
