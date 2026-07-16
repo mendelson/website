@@ -41,7 +41,7 @@ The repo carries **two complete designs side by side**, selected by the
   `assets/css/style_new.css`, redesigned page bodies in `content/new/`
   (home, teaching, publications), and the accordion JS in
   `assets/js/site_new.js`. Legacy content pages (CV, teaching sub-pages,
-  side projects, music sheets, tracker…) are preserved at their old URLs
+  side projects, music sheets…) are preserved at their old URLs
   and wrapped in the new shell.
 - `SITE_VERSION = "legacy"` — the original site, exactly as it shipped:
   shell `templates/base.html`, styles `assets/css/style.css`, bodies from
@@ -118,7 +118,6 @@ GitHub Pages, `/…` on the apex domain.)
 | `/off/music-sheets/` | Music Sheets |
 | `/off/a-coxinha/` | A Coxinha |
 | `/cv/` | CV |
-| `/tracker/` | Garmin Tracker (live companion) |
 
 ### Redirects that land on a page
 
@@ -134,7 +133,6 @@ GitHub Pages, `/…` on the apex domain.)
 | `/off/` | `/o/` |
 | `/off/music-sheets/` | `/m/`, `/music/`, `/music-sheets/` |
 | `/off/a-coxinha/` | `/a/`, `/a-coxinha/` |
-| `/tracker/` | `/track/`, `/tracker-data/`, `/tracker-data-field/` |
 
 ### Redirects that go off-site
 
@@ -147,6 +145,11 @@ GitHub Pages, `/…` on the apex domain.)
 | `taggo.one/mmendelson` (contact card) | `/contact/`, `/c/`, `/findme/`, `/contato/` |
 | `kiezelpay.com/…` (Garmin app pricing) | `/garmin-pricing/` |
 | `api.mmendelson.com/pair` | `/pair/` |
+| `apps.mmendelson.com/tracker` (Garmin Tracker Data Field) | `/tracker/`, `/track/`, `/tracker-data/`, `/tracker-data-field/` |
+
+> The Garmin Tracker Data Field companion **moved** to
+> `apps.mmendelson.com/tracker`. The `/tracker/` redirects above **preserve the
+> query string** (`?trackId=…`) so existing watch-generated links keep working.
 
 > Some short aliases reach an off-site destination through one in-site hop
 > (e.g. `/g/` → `/garmin-apps/` → `apps.mmendelson.com`); the tables show the
@@ -156,7 +159,7 @@ GitHub Pages, `/…` on the apex domain.)
 
 - Dropdown parents (Teaching, Side projects) only reveal their submenu — they
   do not navigate to a page.
-- `/tracker/` is the live Garmin Tracker Data Field companion: it reads a
-  `trackId` from the URL (`?trackId=…`) or the input, queries the original
-  Google Apps Script backend, renders the latest records and auto-refreshes
-  every 5 minutes (see `assets/js/tracker.js`).
+- The Garmin Tracker Data Field companion **moved** to
+  `apps.mmendelson.com/tracker` (in the `apps-website` repo). `/tracker/` (and
+  its aliases) now redirect there, carrying the `?trackId=…` query so existing
+  links keep working.

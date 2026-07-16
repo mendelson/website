@@ -67,7 +67,7 @@ PAGES = [
     ("music-sheets",   "/off/music-sheets/",        "Music Sheets — Mateus Mendelson", "Music Sheets",                     "Music sheets transcribed by Mateus Mendelson."),
     ("cv",             "/cv/",                      "CV — Mateus Mendelson",           "CV",                               "Curriculum Vitae of Mateus Mendelson."),
     ("a-coxinha",      "/off/a-coxinha/",           "A Coxinha — Mateus Mendelson",    "A Coxinha",                        "An example page built during an HTML 101 class."),
-    ("tracker",        "/tracker/",                 "Garmin Tracker — Mateus Mendelson","Garmin Tracker Data Field",        "Live tracking companion for the Garmin Tracker Data Field."),
+    # /tracker/ moved to apps.mmendelson.com/tracker (now a redirect, see REDIRECTS).
 ]
 
 # --------------------------------------------------------------------------
@@ -92,7 +92,7 @@ NEW_PAGES = [
     ("music-sheets",  "/off/music-sheets/",                 "Music Sheets — Mateus Mendelson",             "Music Sheets",                   "Music sheets transcribed by Mateus Mendelson.",                                                                               "prose",  840),
     ("cv",            "/cv/",                               "CV — Mateus Mendelson",                       "CV",                             "Curriculum Vitae of Mateus Mendelson.",                                                                                       "prose",  840),
     ("a-coxinha",     "/off/a-coxinha/",                    "A Coxinha — Mateus Mendelson",                "A Coxinha",                      "An example page built during an HTML 101 class.",                                                                             "prose",  840),
-    ("tracker",       "/tracker/",                          "Garmin Tracker — Mateus Mendelson",           "Garmin Tracker Data Field",      "Live tracking companion for the Garmin Tracker Data Field.",                                                                  "prose",  840),
+    # /tracker/ moved to apps.mmendelson.com/tracker (now a redirect, see REDIRECTS).
 ]
 
 # --------------------------------------------------------------------------
@@ -162,8 +162,12 @@ REDIRECTS = {
     "/contato/": "https://taggo.one/mmendelson",
     "/garmin-pricing/": "https://kiezelpay.com/code/?s=6B55524C-B713-A5B0-5C41-2D9341952181&dsu=2277156&p=69899-65105-76769-67043-67044-67046-65066-63790-66655-76730-69886&platform=garmin",
     "/pair/": "https://api.mmendelson.com/pair",
-    "/tracker-data-field/": "/tracker/",
-    "/tracker-data/": "/tracker-data-field/",
+    # The Garmin Tracker Data Field companion moved to apps.mmendelson.com/tracker.
+    # These carry the ?trackId=… query to the destination (see
+    # PRESERVE_QUERY_REDIRECTS below).
+    "/tracker/": "https://apps.mmendelson.com/tracker/",
+    "/tracker-data-field/": "https://apps.mmendelson.com/tracker/",
+    "/tracker-data/": "https://apps.mmendelson.com/tracker/",
     "/inicio/": "/",
     # Short aliases the original 301s to a page (single-letter and word
     # shortcuts; targets mirror the original exactly and may chain on from
@@ -183,12 +187,19 @@ REDIRECTS = {
     "/garmin/": "/garmin-apps/",
     "/music/": "/off/music-sheets/",
     "/teach/": "/teaching/",
-    "/track/": "/tracker/",
+    "/track/": "https://apps.mmendelson.com/tracker/",
     "/pub/": "/publications/",
     "/publication/": "/publications/",
     "/extra/": "/extra-resources/",
     "/uni/": "/teaching/university-center-iesb/",
     "/university/": "/teaching/university-center-iesb/",
+}
+
+# Redirect sources whose stub carries the incoming query string + hash to the
+# destination. The Garmin tracker moved to apps.mmendelson.com/tracker and its
+# links carry ?trackId=…, which must survive the redirect.
+PRESERVE_QUERY_REDIRECTS = {
+    "/tracker/", "/track/", "/tracker-data/", "/tracker-data-field/",
 }
 
 
@@ -277,7 +288,7 @@ def write_file(path, content):
         f.write(content)
 
 
-def redirect_html(target):
+def redirect_html(target, preserve_query=False):
     external = target.startswith(("http://", "https://"))
     link = target if external else BASE + target
     canonical = target if external else SITE_URL + target
@@ -285,6 +296,14 @@ def redirect_html(target):
     # HTML attribute contexts (href, meta content, canonical).
     link_attr = link.replace("&", "&amp;")
     canonical_attr = canonical.replace("&", "&amp;")
+    # When preserve_query is set, carry the incoming query string and hash to
+    # the destination — used by the migrated /tracker/ redirect so ?trackId=…
+    # survives the hop to apps.mmendelson.com. The no-JS meta-refresh fallback
+    # keeps the bare target.
+    if preserve_query:
+        js = 'location.replace("{link}"+location.search+location.hash);'.format(link=link)
+    else:
+        js = 'location.replace("{link}");'.format(link=link)
     return (
         '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
         '<title>Redirecting…</title>'
@@ -294,8 +313,8 @@ def redirect_html(target):
         '</head><body>'
         '<p>This page has moved. <a href="{la}">Click here</a> if you are not '
         'redirected automatically.</p>'
-        '<script>location.replace("{link}");</script>'
-        '</body></html>'.format(c=canonical_attr, la=link_attr, link=link))
+        '<script>{js}</script>'
+        '</body></html>'.format(c=canonical_attr, la=link_attr, js=js))
 
 
 # ==========================================================================
@@ -344,7 +363,7 @@ def build_new():
     # Redirects (legacy set + Extra-resources folded into Teaching)
     redirects = dict(REDIRECTS, **{"/extra-resources/": "/teaching/"})
     for src, target in redirects.items():
-        write_file(out_path_for(src), redirect_html(target))
+        write_file(out_path_for(src), redirect_html(target, src in PRESERVE_QUERY_REDIRECTS))
         print("redirect", src, "->", target)
 
     # 404
@@ -386,7 +405,7 @@ def build_legacy():
 
     # Redirects
     for src, target in REDIRECTS.items():
-        write_file(out_path_for(src), redirect_html(target))
+        write_file(out_path_for(src), redirect_html(target, src in PRESERVE_QUERY_REDIRECTS))
         print("redirect", src, "->", target)
 
     # 404
