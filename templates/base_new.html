@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}}</title>
+  <meta name="description" content="{{DESC}}">
+  <link rel="canonical" href="{{SITE}}{{URL}}">
+  <meta property="og:title" content="{{TITLE}}">
+  <meta property="og:description" content="{{DESC}}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{SITE}}{{URL}}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{BASE}}/assets/images/cropped-logomendi-favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{BASE}}/assets/images/cropped-logomendi-favicon-192x192.png">
+  <link rel="apple-touch-icon" href="{{BASE}}/assets/images/cropped-logomendi-favicon-180x180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{BASE}}/assets/css/style_new.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="brandbar">
+    <div class="brandbar-inner">
+      <a class="brand-logo" href="{{BASE}}/" aria-label="mmendelson.com — home">
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <path d="M6 10h20v15h17" stroke="currentColor" stroke-width="6"></path>
+          <path d="M6 22h9v15h18v-9" stroke="currentColor" stroke-width="6"></path>
+        </svg>
+        <span class="brand-word">mmendelson.com</span>
+      </a>
+      <nav class="site-switch" aria-label="Sister sites">
+        <a href="{{BASE}}/" aria-current="page" class="active">Home</a>
+        <a href="https://apps.mmendelson.com">Apps</a>
+        <a href="https://run.mmendelson.com">Run</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="site-main" style="max-width:{{MAXW}}px">
+    {{MAIN}}
+  </main>
+
+  <footer class="site-footer2">
+    <div class="footer-inner">
+      <div class="foot-contact">
+        <a class="foot-email" href="mailto:mendelson.mateus@gmail.com">mendelson.mateus@gmail.com</a>
+        <a class="foot-cardlink" href="https://taggo.one/mmendelson" target="_blank" rel="noopener">Contact card ↗</a>
+      </div>
+      <nav class="foot-social" aria-label="Social profiles">
+        <a href="https://www.linkedin.com/in/mateusmendelson/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://github.com/mendelson" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/mateusmendelson" target="_blank" rel="noopener">YouTube</a>
+        <a href="https://www.strava.com/athletes/9485255" target="_blank" rel="noopener">Strava</a>
+        <a href="https://instagram.com/byte.papo" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://open.spotify.com/show/1zGax7Ftyup8WKN7BQGJ1g" target="_blank" rel="noopener">Spotify</a>
+        <a href="https://t.me/mmendelson" target="_blank" rel="noopener">Telegram</a>
+      </nav>
+      <nav class="foot-switch" aria-label="Sister sites">
+        <a href="{{BASE}}/" class="active">Home</a>
+        <a href="https://apps.mmendelson.com" target="_blank" rel="noopener">Apps ↗</a>
+        <a href="https://run.mmendelson.com" target="_blank" rel="noopener">Run ↗</a>
+      </nav>
+    </div>
+    <div class="foot-copy">© {{YEAR}} Mateus Mendelson</div>
+  </footer>
+
+  <script src="{{BASE}}/assets/js/site_new.js"></script>
+</body>
+</html>

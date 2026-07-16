@@ -37,6 +37,20 @@ else:
 YEAR = datetime.date.today().year
 
 # --------------------------------------------------------------------------
+# Design toggle / rollback switch.
+#   SITE_VERSION = "new"    -> the 2026 redesign (dark-default IBM Plex hub;
+#                              base_new.html + style_new.css + content/new/).
+#   SITE_VERSION = "legacy" -> the original site exactly as it shipped
+#                              (base.html + style.css + content/).
+# Flip this one constant and re-run `python3 build.py` to roll the whole site
+# back to the previous design — both designs live side by side in the repo.
+# An env var of the same name overrides it (handy for previewing:
+#   SITE_VERSION=legacy python3 build.py).
+# --------------------------------------------------------------------------
+SITE_VERSION = os.environ.get("SITE_VERSION", "new")
+CONTENT_NEW = os.path.join(CONTENT, "new")
+
+# --------------------------------------------------------------------------
 # Page registry.  `url` is the public path (kept identical to the old
 # WordPress slugs so existing inbound links keep working).
 # --------------------------------------------------------------------------
@@ -54,6 +68,31 @@ PAGES = [
     ("cv",             "/cv/",                      "CV — Mateus Mendelson",           "CV",                               "Curriculum Vitae of Mateus Mendelson."),
     ("a-coxinha",      "/off/a-coxinha/",           "A Coxinha — Mateus Mendelson",    "A Coxinha",                        "An example page built during an HTML 101 class."),
     ("tracker",        "/tracker/",                 "Garmin Tracker — Mateus Mendelson","Garmin Tracker Data Field",        "Live tracking companion for the Garmin Tracker Data Field."),
+]
+
+# --------------------------------------------------------------------------
+# Page registry for the redesign (SITE_VERSION == "new").
+#   layout "custom" — the fragment provides its own full <main> structure
+#                     (home, teaching, publications: bespoke redesign pages).
+#   layout "prose"  — legacy content is preserved and wrapped in a "← Home"
+#                     breadcrumb + page title + generic prose container so
+#                     every old URL keeps working with the new look.
+#   maxw            — <main> max-width in px (1020 = home, 840 = content pages).
+# Fragments are read from content/new/<slug>.html when present, else content/.
+# --------------------------------------------------------------------------
+NEW_PAGES = [
+    # slug            url                                   title                                          h1                                desc                                                                             layout    maxw
+    ("home",          "/",                                  "Mateus Mendelson — Data Scientist",           "",                               "Mateus Mendelson — Data Scientist. Two production systems built and run solo, teaching materials, research and publications.", "custom", 1020),
+    ("teaching",      "/teaching/",                         "Teaching Materials — Mateus Mendelson",       "Teaching Materials",             "Course notes, slide decks and notebooks authored by Mateus Mendelson, organized by discipline.",                              "custom", 840),
+    ("publications",  "/publications/",                     "Research & Publications — Mateus Mendelson",  "Research & Publications",        "Conference proceedings, theses, workshops, seminars and posters by Mateus Mendelson.",                                        "custom", 840),
+    ("fga",           "/teaching/fga/",                     "UnB Gama — Mateus Mendelson",                 "University of Brasília - Gama",  "Courses taught at the University of Brasília - Gama (UnB/FGA).",                                                               "prose",  840),
+    ("iesb",          "/teaching/university-center-iesb/",  "IESB — Mateus Mendelson",                     "University Center IESB",         "Courses taught at the University Center IESB.",                                                                               "prose",  840),
+    ("projecao",      "/teaching/projecao/",                "Projeção — Mateus Mendelson",                 "University Center Projeção",     "Courses taught at the University Center Projeção.",                                                                           "prose",  840),
+    ("off",           "/off/",                              "Side projects — Mateus Mendelson",            "Side projects",                  "Personal interests and side projects.",                                                                                       "prose",  840),
+    ("music-sheets",  "/off/music-sheets/",                 "Music Sheets — Mateus Mendelson",             "Music Sheets",                   "Music sheets transcribed by Mateus Mendelson.",                                                                               "prose",  840),
+    ("cv",            "/cv/",                               "CV — Mateus Mendelson",                       "CV",                             "Curriculum Vitae of Mateus Mendelson.",                                                                                       "prose",  840),
+    ("a-coxinha",     "/off/a-coxinha/",                    "A Coxinha — Mateus Mendelson",                "A Coxinha",                      "An example page built during an HTML 101 class.",                                                                             "prose",  840),
+    ("tracker",       "/tracker/",                          "Garmin Tracker — Mateus Mendelson",           "Garmin Tracker Data Field",      "Live tracking companion for the Garmin Tracker Data Field.",                                                                  "prose",  840),
 ]
 
 # --------------------------------------------------------------------------
@@ -259,11 +298,82 @@ def redirect_html(target):
         '</body></html>'.format(c=canonical_attr, la=link_attr, link=link))
 
 
-def main():
-    if os.path.isdir(OUT):
-        shutil.rmtree(OUT)
-    os.makedirs(OUT, exist_ok=True)
+# ==========================================================================
+# Redesign renderer (SITE_VERSION == "new")
+# ==========================================================================
+def new_content_path(slug):
+    """Prefer a redesign fragment in content/new/, else the legacy one."""
+    override = os.path.join(CONTENT_NEW, slug + ".html")
+    return override if os.path.exists(override) else os.path.join(CONTENT, slug + ".html")
 
+
+def render_new_page(template, slug, url, title, h1, desc, layout, maxw):
+    body = add_base(rewrite_internal_links(read(new_content_path(slug))))
+    if layout == "prose":
+        main_html = (
+            '<div class="page-head">'
+            '<a class="breadcrumb" href="{base}/">← Home</a>'
+            '<h1 class="page-title">{h1}</h1>'
+            '</div>\n<div class="prose">\n{body}\n</div>'
+        ).format(base=BASE, h1=h1, body=body)
+    else:
+        main_html = body
+    page = (template
+            .replace("{{TITLE}}", title)
+            .replace("{{DESC}}", desc)
+            .replace("{{SITE}}", SITE_URL)
+            .replace("{{BASE}}", BASE)
+            .replace("{{URL}}", url)
+            .replace("{{MAXW}}", str(maxw))
+            .replace("{{MAIN}}", main_html)
+            .replace("{{YEAR}}", str(YEAR)))
+    return page
+
+
+def build_new():
+    template = read(os.path.join(TEMPLATES, "base_new.html"))
+
+    # Pages
+    for slug, url, title, h1, desc, layout, maxw in NEW_PAGES:
+        html = render_new_page(template, slug, url, title, h1, desc, layout, maxw)
+        write_file(out_path_for(url), html)
+        print("page   ", url)
+
+    # Redirects (legacy set + Extra-resources folded into Teaching)
+    redirects = dict(REDIRECTS, **{"/extra-resources/": "/teaching/"})
+    for src, target in redirects.items():
+        write_file(out_path_for(src), redirect_html(target))
+        print("redirect", src, "->", target)
+
+    # 404
+    notfound = render_new_page(
+        template, "404", "/404.html",
+        "Page not found — Mateus Mendelson", "Page not found",
+        "The page you are looking for does not exist.", "prose", 840) \
+        if os.path.exists(new_content_path("404")) else (
+            template
+            .replace("{{TITLE}}", "Page not found — Mateus Mendelson")
+            .replace("{{DESC}}", "The page you are looking for does not exist.")
+            .replace("{{SITE}}", SITE_URL)
+            .replace("{{BASE}}", BASE)
+            .replace("{{URL}}", "/404.html")
+            .replace("{{MAXW}}", "840")
+            .replace("{{MAIN}}",
+                     '<div class="page-head">'
+                     '<a class="breadcrumb" href="{b}/">← Home</a>'
+                     '<h1 class="page-title">Page not found</h1></div>'
+                     '<div class="prose"><p>Sorry, the page you are looking for '
+                     'does not exist. Try the <a href="{b}/">home page</a>.</p>'
+                     '</div>'.format(b=BASE))
+            .replace("{{YEAR}}", str(YEAR)))
+    write_file(os.path.join(OUT, "404.html"), notfound)
+    print("page    /404.html")
+
+    # sitemap uses the redesign page set
+    return [u for _, u, *_ in NEW_PAGES]
+
+
+def build_legacy():
     template = read(os.path.join(TEMPLATES, "base.html"))
 
     # Pages
@@ -301,6 +411,18 @@ def main():
     write_file(os.path.join(OUT, "404.html"), notfound)
     print("page    /404.html")
 
+    # sitemap uses the legacy page set
+    return [u for _, u, *_ in PAGES]
+
+
+def main():
+    if os.path.isdir(OUT):
+        shutil.rmtree(OUT)
+    os.makedirs(OUT, exist_ok=True)
+
+    print("Building site — SITE_VERSION =", SITE_VERSION)
+    sitemap_urls = build_new() if SITE_VERSION == "new" else build_legacy()
+
     # Assets
     shutil.copytree(ASSETS, os.path.join(OUT, "assets"))
     print("copied  assets/")
@@ -316,7 +438,7 @@ def main():
     today = datetime.date.today().isoformat()
     urls = "".join(
         "  <url><loc>{}{}</loc><lastmod>{}</lastmod></url>\n".format(SITE_URL, u, today)
-        for _, u, *_ in PAGES)
+        for u in sitemap_urls)
     sitemap = ('<?xml version="1.0" encoding="UTF-8"?>\n'
                '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                + urls + "</urlset>\n")
