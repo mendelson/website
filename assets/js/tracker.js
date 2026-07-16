@@ -12,7 +12,8 @@ window.addEventListener('DOMContentLoaded', function () {
   const ENDPOINT = "https://script.google.com/macros/s/AKfycbzlsxmcB-4w7LcuvJ1j-sHwJOBYGxREp74cNdaYdcD4zyHUUVXhYjh_Lcxc0W1M6yH4EA/exec";
 
   let currentTrackId = '';
-  let countdown = 300; // seconds (5 minutes)
+  const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+  let nextUpdateAt = 0;             // absolute timestamp of the next auto-refresh
   let countdownInterval = null;
 
   function escapeHtml(value) {
@@ -74,32 +75,47 @@ window.addEventListener('DOMContentLoaded', function () {
 
   function updateCountdownDisplay(secondsLeft) {
     if (!autoUpdateMessage) return;
+    secondsLeft = Math.max(0, secondsLeft);
     const minutes = Math.floor(secondsLeft / 60);
     const seconds = secondsLeft % 60;
     autoUpdateMessage.textContent =
       `Next update in ${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
+  // Drive the countdown from an absolute target timestamp rather than a
+  // decrementing counter, so it stays correct even when the tab is
+  // backgrounded and the 1s interval is throttled or paused. Each tick derives
+  // the time left from `nextUpdateAt`; once it has passed (possibly while the
+  // page was hidden) we refresh once and schedule the next update.
+  function tick() {
+    const secondsLeft = Math.round((nextUpdateAt - Date.now()) / 1000);
+    if (secondsLeft <= 0) {
+      nextUpdateAt = Date.now() + REFRESH_MS;
+      updateCountdownDisplay(REFRESH_MS / 1000);
+      fetchData(currentTrackId);
+      return;
+    }
+    updateCountdownDisplay(secondsLeft);
+  }
+
   function startCountdown() {
     if (countdownInterval) clearInterval(countdownInterval);
-
-    countdown = 300;
-    updateCountdownDisplay(countdown);
-
-    countdownInterval = setInterval(() => {
-      countdown--;
-      updateCountdownDisplay(countdown);
-      if (countdown <= 0) {
-        fetchData(currentTrackId);
-        countdown = 300;
-      }
-    }, 1000);
+    nextUpdateAt = Date.now() + REFRESH_MS;
+    updateCountdownDisplay(REFRESH_MS / 1000);
+    countdownInterval = setInterval(tick, 1000);
   }
 
   function startAutoRefresh(trackId) {
     currentTrackId = trackId;
     startCountdown();
   }
+
+  // When the tab becomes visible again, re-evaluate the countdown immediately
+  // (and refresh right away if the scheduled time passed while it was hidden),
+  // instead of waiting for the next throttled interval tick.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && countdownInterval) tick();
+  });
 
   checkButton.addEventListener('click', () => {
     const trackId = inputField.value.trim();
