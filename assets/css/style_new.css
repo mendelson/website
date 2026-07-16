@@ -215,8 +215,7 @@ html:lang(pt) .btn-cv > [lang="pt"]{display:inline-flex}
   display:flex;flex-wrap:wrap;gap:32px;justify-content:space-between;
 }
 .foot-contact{display:grid;gap:8px;align-content:start}
-.foot-email{font-family:'IBM Plex Mono',monospace;font-size:14px;text-decoration:none}
-.foot-cardlink{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);text-decoration:none}
+.foot-cardlink{font-family:'IBM Plex Mono',monospace;font-size:14px;text-decoration:none}
 .foot-social{
   display:flex;flex-wrap:wrap;gap:4px 16px;align-content:start;
   font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);
