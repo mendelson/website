@@ -1,8 +1,12 @@
 # Visual identity standardization — mmendelson.com family
 
-**Status: COMPLETE (2026-07-17).** All phases landed and verified; see the
-"Family path map (final)", "Final token table" and "Plan-vs-results audit"
-sections at the bottom for the definitive end state.
+**Status: COMPLETE (2026-07-17, revised same day).** All phases landed and
+verified; see the "Family path map (final)", "Final token table",
+"Plan-vs-results audit" and "Revision round (user feedback)" sections at the
+bottom for the definitive end state. The revision round **supersedes parts of
+decisions 1, 2 and 7 below** — most importantly, apps and run now share one
+palette (apps' blue/grays; the ember set was rejected), and the hub's language
+selector is the 🌐 globe dropdown, not a button row.
 
 **Status doc for a cross-repo initiative spanning `website` (hub), `apps-website`
 (apps.mmendelson.com) and `corridas` (run.mmendelson.com).** This file is the
@@ -461,16 +465,24 @@ Per-repo detail: `website/README.md`, `apps-website/README.md` (Path map),
 | `/favorites* /highlights*` | 301 → `/gallery` |
 | `/shoe-favicon.svg` | Animated shoe favicon (generated; see 3e) |
 
-## Final token table
+## Final token table (post-revision)
 
-| | Hub | Apps | Run |
-|---|---|---|---|
-| Accent | `#d3a24f` gold | `#3b82f6` blue | `#e0693a` ember |
-| Background | `#151210` warm near-black (light theme too, via `prefers-color-scheme`) | `#111` (dark only) | `#0f1115` cool near-black (dark only) |
-| Surfaces | `#1d1a16` | `#1a1a1a` / `#444` | `#171b22` / `#21262f` |
-| Fonts | IBM Plex Serif / Sans / Mono | same | same |
-| Brand mark | staircase (currentColor SVG; raster favicon = user's exact image) | staircase raster favicon set | shoe mascot (`shoe-wear.js`, single source of truth) + animated SVG favicon |
-| Chrome | sticky brand bar + structured footer | static brand bar + footer (classed divs) | static brand bar + footer (classed divs) |
+Two tones, not three: the hub keeps gold; **apps and run share one product
+palette** (apps' values — the run-specific ember set was rejected by the user
+and removed).
+
+| | Hub | Apps + Run (shared) |
+|---|---|---|
+| Accent | `#d3a24f` gold | `#3b82f6` blue |
+| Background | `#151210` warm near-black (+ light theme via `prefers-color-scheme`) | `#111` (dark only) |
+| Surfaces | `#1d1a16` | `#1a1a1a` / `#242424` (run) / `#444` buttons (apps) |
+| Border / muted | `--line` token | `#333` / `#9a9a9a` |
+| Fonts | IBM Plex Serif / Sans / Mono | same |
+| Brand mark | staircase (currentColor SVG; raster favicon = user's exact image) | apps: staircase favicon set · run: shoe mascot + animated SVG favicon (artwork keeps its own colors) |
+| Chrome | brand bar (mark + 🌐 globe + switcher, **no URL wordmark**) + structured footer | apps: static brand bar (mark + switcher, no wordmark) · run: switcher inside the app header (**no separate brand bar**) |
+| Language selector | 🌐 globe dropdown (family standard) | 🌐 (already native to both) |
+| Footer copyright | `© <year> M. Mendelson` | same (no product name) |
+| Family navigation | always same-tab | always same-tab |
 
 ## Plan-vs-results audit (Phase 4 close-out)
 
@@ -519,3 +531,31 @@ Everything landed; deviations are listed explicitly:
 4. Continue from there. Update this file's checkboxes as items land (same
    commit/PR as the code change where practical, so the doc never drifts
    from reality).
+
+## Revision round (user feedback, 2026-07-17)
+
+After the initial completion, a feedback round changed the following — these
+supersede the corresponding earlier decisions:
+
+1. **One product palette, not two** (supersedes decisions 1–2's three-tone
+   scheme): apps and run must share the same coloring code, and run's ember
+   set was rejected ("terrible"). **Apps' palette was applied to run**
+   (accent `#3b82f6`, bg `#111`, surfaces `#1a1a1a`/`#242424`, border
+   `#333`, text `#eee`/`#9a9a9a`) — corridas PR #891. The shoe mascot keeps
+   its own artwork colors. The hub keeps gold.
+2. **Globe language selector is the family standard** (supersedes decision
+   7's button row): the hub's `DE EN ES FR PT` header row was replaced by
+   the 🌐 dropdown pattern run/apps already use — website PR #16. Same
+   no-URL mechanism, persisted in `localStorage.mm_lang`.
+3. **Run's separate brand bar removed** (revises 3d): it duplicated the
+   header (shoe shown twice). The Home/Apps/Run switcher now lives inside
+   the app header next to the 📍/🌐 controls — corridas PR #890.
+4. **No site-URL wordmarks in headers**, on any of the three sites (hub PR
+   #16, apps PR #13, run PR #890) — the mark alone identifies the site.
+5. **Same-tab family navigation everywhere**: every Home/Apps/Run switcher
+   link, the hub's project cards and the running Gallery link navigate in
+   the same tab; only truly external services open new tabs.
+6. **Footer copyright standardized** to `© <year> M. Mendelson` on all
+   three sites (apps dropped "— Garmin Apps").
+7. **Hub section 01 renamed** to "Long-Term Projects" (hyphenated), in all
+   five languages — website PR #16.
