@@ -9,15 +9,15 @@ static host (GitHub Pages, Cloudflare Pages, Netlify, …).
 
 ```
 content/          Page bodies (HTML fragments), one file per page
-templates/        base.html — the shared page shell (header, nav, footer)
+templates/        base.html — the shared page shell (brand bar, footer)
 assets/
   css/style.css   All styling
-  js/main.js      Mobile-menu / dropdown behaviour
+  js/site.js      Teaching-accordion deep-linking + the language switch
   images/         Pictures, icons, favicon
   files/          PDFs (CV, music sheets, …)
 build.py          The generator: content + template -> public/
 tools/
-  fetch_assets.sh Downloads the original media from the old WP site
+  fetch_assets.sh Downloads original media from the old WP site
 public/           Generated output (git-ignored; rebuilt on every deploy)
 ```
 
@@ -31,57 +31,33 @@ cd public && python3 -m http.server 8000   # then open http://localhost:8000
 
 No third-party packages are required (standard library only).
 
-## Two designs / rollback switch
-
-The repo carries **two complete designs side by side**, selected by the
-`SITE_VERSION` constant near the top of `build.py`:
-
-- `SITE_VERSION = "new"` (default) — the 2026 redesign: a dark-default,
-  IBM Plex, gold-accent hub. Shell `templates/base_new.html`, styles
-  `assets/css/style_new.css`, redesigned page bodies in `content/new/`
-  (home, teaching, publications), and the accordion JS in
-  `assets/js/site_new.js`. Legacy content pages (CV, teaching sub-pages,
-  side projects, music sheets…) are preserved at their old URLs
-  and wrapped in the new shell.
-- `SITE_VERSION = "legacy"` — the original site, exactly as it shipped:
-  shell `templates/base.html`, styles `assets/css/style.css`, bodies from
-  `content/`.
-
-**To roll back to the previous site**, flip that one constant to `"legacy"`
-and re-run `python3 build.py` (or build once with `SITE_VERSION=legacy
-python3 build.py` to preview without editing the file). Nothing is deleted
-either way — both designs live in the repo.
-
 ## Editing content
 
-- **Text of a redesign page** → edit the matching file in `content/new/`
-  (home, teaching, publications). Other pages fall back to `content/`.
-- **Text of a legacy page** → edit the matching file in `content/`.
-- **Navigation, page list, redirects, social links** → edit the tables near
-  the top of `build.py` (`PAGES`/`NEW_PAGES`, `NAV`, `SOCIAL`, `REDIRECTS`).
-- **Look & feel** → `assets/css/style_new.css` (new) or
-  `assets/css/style.css` (legacy).
+- **Text of a page** → edit the matching file in `content/`.
+- **Navigation, page list, redirects** → edit the tables near the top of
+  `build.py` (`PAGES`, `REDIRECTS`).
+- **Look & feel** → `assets/css/style.css`.
 
 Re-run `python3 build.py` after any change.
 
-## Language support (redesign only)
+## Language support
 
-The redesign (`SITE_VERSION = "new"`) supports **five languages — German,
-English, Spanish, French, Portuguese** — matching the set already used on
-apps.mmendelson.com and run.mmendelson.com, but via a different mechanism:
-**one URL per page, no `/de/ /en/ /es/ /fr/ /pt/` folders.** Every
-translatable string ships all five languages inline as
+The site supports **five languages — German, English, Spanish, French,
+Portuguese** — matching the set already used on apps.mmendelson.com and
+run.mmendelson.com, but via a different mechanism: **one URL per page, no
+`/de/ /en/ /es/ /fr/ /pt/` folders.** Every translatable string ships all
+five languages inline as
 `<span class="t"><span lang="en">…</span><span lang="de">…</span>
 <span lang="es">…</span><span lang="fr">…</span><span lang="pt">…</span></span>`;
-CSS (`html:lang(xx) .t > [lang="xx"]{display:inline}` in `style_new.css`)
-shows only the one matching `<html lang>`. This keeps a single canonical URL
-per page (no hreflang/sitemap fan-out, no duplicate content across five
-folders) at the cost of not having language-specific URLs to share/index —
-right tradeoff for a low-traffic personal hub, wrong one for
-apps/run's larger content volume, which is why those two keep their existing
-per-language folders.
+CSS (`html:lang(xx) .t > [lang="xx"]{display:inline}` in `style.css`) shows
+only the one matching `<html lang>`. This keeps a single canonical URL per
+page (no hreflang/sitemap fan-out, no duplicate content across five folders)
+at the cost of not having language-specific URLs to share/index — right
+tradeoff for a low-traffic personal hub, wrong one for apps/run's larger
+content volume, which is why those two keep their existing per-language
+folders.
 
-- **Detection**: a `<head>` script (in `templates/base_new.html`) checks
+- **Detection**: a `<head>` script (in `templates/base.html`) checks
   `localStorage.mm_lang` first; if unset, it falls back to
   `navigator.language`, matching apps.mmendelson.com's own detection list
   (`['de','en','es','fr','pt']`, default `en`). Runs before first paint, so
@@ -89,7 +65,7 @@ per-language folders.
 - **Manual override**: the `DE EN ES FR PT` control in the brand bar
   (`.lang-switch`) lets a visitor pick any of the five regardless of browser
   language. Click sets `document.documentElement.lang` and persists the
-  choice to `localStorage.mm_lang` (`assets/js/site_new.js`) — no navigation,
+  choice to `localStorage.mm_lang` (`assets/js/site.js`) — no navigation,
   no reload.
 - **What's translated**: UI chrome and descriptive copy (section labels,
   intros, buttons, breadcrumbs, page titles/subtitles, the small `off/
@@ -104,12 +80,12 @@ per-language folders.
 - **CV button**: only an English and a Portuguese résumé file exist. The
   button shows the Portuguese one for `pt`, and falls back to the English
   one for every other language (`de`/`en`/`es`/`fr`) — see the CSS comment
-  above `.btn-cv` in `style_new.css`.
+  above `.btn-cv` in `style.css`.
 - **Adding a sixth language**: add a `<span lang="xx">` to every `.t` group
   (search for the pattern above), add the CSS `html:lang(xx) .t >
   [lang="xx"]{display:inline}` rule, add `xx` to the `langs` array in the
   `<head>` detection script, and add a button to `.lang-switch` in
-  `templates/base_new.html`.
+  `templates/base.html`.
 
 ## Media assets
 
@@ -204,8 +180,6 @@ GitHub Pages, `/…` on the apex domain.)
 
 ## Notes / known gaps
 
-- Dropdown parents (Teaching, Side projects) only reveal their submenu — they
-  do not navigate to a page.
 - The Garmin Tracker Data Field companion **moved** to
   `apps.mmendelson.com/tracker` (in the `apps-website` repo). `/tracker/` (and
   its aliases) now redirect there, carrying the `?trackId=…` query so existing

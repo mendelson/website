@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>(function(){var langs=['de','en','es','fr','pt'];var s;try{s=localStorage.getItem('mm_lang');}catch(e){}if(langs.indexOf(s)<0){var b=((navigator.language||navigator.userLanguage||'en')+'').toLowerCase().split('-')[0];s=langs.indexOf(b)>=0?b:'en';}document.documentElement.lang=s;})();</script>
   <title>{{TITLE}}</title>
   <meta name="description" content="{{DESC}}">
   <link rel="canonical" href="{{SITE}}{{URL}}">
@@ -10,41 +11,73 @@
   <meta property="og:description" content="{{DESC}}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="{{SITE}}{{URL}}">
-  <link rel="icon" type="image/png" sizes="32x32" href="{{BASE}}/assets/images/cropped-logomendi-favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="{{BASE}}/assets/images/cropped-logomendi-favicon-192x192.png">
-  <link rel="apple-touch-icon" href="{{BASE}}/assets/images/cropped-logomendi-favicon-180x180.png">
+  <link rel="icon" href="{{BASE}}/assets/images/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{BASE}}/assets/images/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{BASE}}/assets/images/favicon-192.png">
+  <link rel="apple-touch-icon" href="{{BASE}}/assets/images/favicon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{BASE}}/assets/css/style.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="{{BASE}}/">Mateus Mendelson</a>
-      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="primary-nav">
-        <span></span><span></span><span></span>
-      </button>
-      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
-        {{NAV}}
-      </nav>
+
+  <header class="brandbar">
+    <div class="brandbar-inner">
+      <a class="brand-logo" href="{{BASE}}/" aria-label="mmendelson.com — home">
+        <svg width="22" height="22" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+          <g transform="translate(2 0)" stroke="currentColor" stroke-width="4" stroke-linejoin="miter">
+            <path d="M6 7H23V25H38V42"></path>
+            <path d="M6 13H17V30H34V42"></path>
+          </g>
+        </svg>
+        <span class="brand-word">mmendelson.com</span>
+      </a>
+      <div class="brandbar-right">
+        <nav class="lang-switch" aria-label="Language">
+          <button type="button" data-lang="de">DE</button>
+          <button type="button" data-lang="en">EN</button>
+          <button type="button" data-lang="es">ES</button>
+          <button type="button" data-lang="fr">FR</button>
+          <button type="button" data-lang="pt">PT</button>
+        </nav>
+        <nav class="site-switch" aria-label="Sister sites">
+          <a href="{{BASE}}/" aria-current="page" class="active">Home</a>
+          <a href="https://apps.mmendelson.com">Apps</a>
+          <a href="https://run.mmendelson.com">Run</a>
+        </nav>
+      </div>
     </div>
   </header>
 
-  <main id="main" class="container">
-    <article class="page">
-      <h1 class="page-title">{{H1}}</h1>
-      {{CONTENT}}
-    </article>
+  <main id="main" class="site-main" style="max-width:{{MAXW}}px">
+    {{MAIN}}
   </main>
 
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <div class="social">
-        {{SOCIAL}}
+  <footer class="site-footer2">
+    <div class="footer-inner">
+      <div class="foot-contact">
+        <a class="foot-cardlink" href="https://taggo.one/mmendelson" target="_blank" rel="noopener"><span class="t"><span lang="en">Contact ↗</span><span lang="de">Kontakt ↗</span><span lang="es">Contacto ↗</span><span lang="fr">Contact ↗</span><span lang="pt">Contato ↗</span></span></a>
       </div>
-      <p class="copyright">&copy; {{YEAR}} Mateus Mendelson</p>
+      <nav class="foot-social" aria-label="Social profiles">
+        <a href="https://www.linkedin.com/in/mateusmendelson/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://github.com/mendelson" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.youtube.com/mateusmendelson" target="_blank" rel="noopener">YouTube</a>
+        <a href="https://www.strava.com/athletes/9485255" target="_blank" rel="noopener">Strava</a>
+        <a href="https://instagram.com/byte.papo" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://open.spotify.com/show/1zGax7Ftyup8WKN7BQGJ1g" target="_blank" rel="noopener">Spotify</a>
+        <a href="https://t.me/mmendelson" target="_blank" rel="noopener">Telegram</a>
+      </nav>
+      <nav class="foot-switch" aria-label="Sister sites">
+        <a href="{{BASE}}/" class="active">Home</a>
+        <a href="https://apps.mmendelson.com" target="_blank" rel="noopener">Apps ↗</a>
+        <a href="https://run.mmendelson.com" target="_blank" rel="noopener">Run ↗</a>
+      </nav>
     </div>
+    <div class="foot-copy">© {{YEAR}} Mateus Mendelson</div>
   </footer>
 
-  <script src="{{BASE}}/assets/js/main.js"></script>
+  <script src="{{BASE}}/assets/js/site.js"></script>
 </body>
 </html>

@@ -1,26 +1,10 @@
 # Media assets needed
 
-The build currently ships **placeholder** images/PDFs so the layout renders.
-Replace them with the originals from the old WordPress site — either run
-`tools/fetch_assets.sh` from a machine that can reach `mmendelson.com`, or drop
-the files manually into the paths below, then run `python3 build.py`.
-
-## Images (`assets/images/`)
-
-- `1002548606.jpg` — https://mmendelson.com/wp-content/uploads/2025/12/1002548606.jpg
-- `1002548979.png` — https://mmendelson.com/wp-content/uploads/2025/12/1002548979.png
-- `1002548990.png` — https://mmendelson.com/wp-content/uploads/2025/12/1002548990.png
-- `1002548993.jpg` — https://mmendelson.com/wp-content/uploads/2025/12/1002548993.jpg
-- `1002549032.jpg` — https://mmendelson.com/wp-content/uploads/2025/12/1002549032.jpg
-- `1002549210.jpg` — https://mmendelson.com/wp-content/uploads/2025/12/1002549210.jpg
-- `1002549240.jpg` — https://mmendelson.com/wp-content/uploads/2025/12/1002549240.jpg
-- `1002549251.jpg` — https://mmendelson.com/wp-content/uploads/2025/12/1002549251.jpg
-- `1002549254.png` — https://mmendelson.com/wp-content/uploads/2025/12/1002549254.png
-- `cropped-logomendi-favicon.png` — https://mmendelson.com/wp-content/uploads/2020/02/cropped-logomendi-favicon.png
-- `cropped-logomendi-favicon-32x32.png` — https://mmendelson.com/wp-content/uploads/2020/02/cropped-logomendi-favicon-32x32.png
-- `cropped-logomendi-favicon-192x192.png` — https://mmendelson.com/wp-content/uploads/2020/02/cropped-logomendi-favicon-192x192.png
-- `cropped-logomendi-favicon-180x180.png` — https://mmendelson.com/wp-content/uploads/2020/02/cropped-logomendi-favicon-180x180.png
-- `cropped-profile_01_cut_portrait-1.png` — https://mmendelson.com/wp-content/uploads/2018/07/cropped-profile_01_cut_portrait-1.png
+The favicon and portrait now have real, checked-in assets (see
+`assets/images/favicon*` and `assets/images/profile.jpg`) — the WordPress-era
+placeholder images and `cropped-*` files they replaced have been removed.
+`tools/fetch_assets.sh` remains for the one category still sourced from the
+old site:
 
 ## PDFs (`assets/files/`)
 
