@@ -1,320 +1,346 @@
-/* ============================================================
-   Mateus Mendelson — personal website
-   ============================================================ */
-:root {
-  --bg: #ffffff;
-  --bg-alt: #f5f7fa;
-  --text: #1f2933;
-  --muted: #52606d;
-  --accent: #2563eb;
-  --accent-dark: #1d4ed8;
-  --border: #e2e8f0;
-  --header-bg: #0f172a;
-  --header-text: #f8fafc;
-  --max-width: 980px;
-  --radius: 8px;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
+/* ==========================================================================
+   mmendelson.com — 2026 redesign
+   Dark-default, IBM Plex, gold accent. Hairlines carry all structure; no
+   shadows. Light theme activates via prefers-color-scheme: light.
+   ========================================================================== */
 
-* { box-sizing: border-box; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  margin: 0;
-  font-family: var(--font);
-  color: var(--text);
-  background: var(--bg);
-  line-height: 1.65;
-  -webkit-font-smoothing: antialiased;
+:root{
+  color-scheme: dark light;
+  --bg:#151210;
+  --bg2:#1d1a16;
+  --fg:#ebe6dc;
+  --muted:#a49c8e;
+  --line:rgba(235,230,220,.14);
+  --accent:#d3a24f;
+  --accent-ink:#1c1408;
 }
-
-.container {
-  width: 100%;
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 0 1.25rem;
-}
-
-a { color: var(--accent); text-decoration: none; }
-a:hover { color: var(--accent-dark); text-decoration: underline; }
-
-img { max-width: 100%; height: auto; }
-
-hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 2rem 0;
-}
-
-.skip-link {
-  position: absolute;
-  left: -999px;
-  top: 0;
-  background: var(--accent);
-  color: #fff;
-  padding: .5rem 1rem;
-  z-index: 200;
-}
-.skip-link:focus { left: 0; }
-
-/* ---------- Header / Nav ---------- */
-.site-header {
-  background: var(--header-bg);
-  color: var(--header-text);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 1px 4px rgba(0,0,0,.15);
-}
-.header-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 64px;
-}
-.brand {
-  color: var(--header-text);
-  font-weight: 700;
-  font-size: 1.2rem;
-  letter-spacing: .2px;
-}
-.brand:hover { color: #fff; text-decoration: none; }
-
-.primary-nav ul {
-  list-style: none;
-  display: flex;
-  gap: .25rem;
-  margin: 0;
-  padding: 0;
-}
-.primary-nav li { position: relative; }
-.primary-nav a {
-  display: block;
-  color: var(--header-text);
-  padding: .65rem .85rem;
-  border-radius: 6px;
-  font-size: .95rem;
-}
-.primary-nav a:hover {
-  background: rgba(255,255,255,.1);
-  color: #fff;
-  text-decoration: none;
-}
-/* Only the current page gets a clear, single highlight. */
-.primary-nav > ul > li > a.active {
-  background: var(--accent);
-  color: #fff;
-}
-
-/* Dropdowns */
-.primary-nav .has-children > a { cursor: pointer; }
-.primary-nav .has-children > a::after {
-  content: "\25BE";
-  display: inline-block;
-  font-size: .7em;
-  margin-left: .35rem;
-  opacity: .7;
-  transition: transform .2s ease;
-}
-.primary-nav .has-children.open > a::after { transform: rotate(-180deg); }
-.primary-nav .submenu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  min-width: 220px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
-  padding: .35rem;
-  flex-direction: column;
-  z-index: 110;
-}
-/* Submenus are closed by default and only open via the .open class
-   (click/tap/keyboard) or, on pointer devices, on hover/focus. */
-.primary-nav .has-children.open > .submenu { display: flex; }
-/* The last item sits at the right edge of the header: open its panel
-   right-aligned so it can't overflow the viewport and force a
-   horizontal scroll (which shifted the whole page sideways). */
-.primary-nav > ul > li:last-child > .submenu {
-  left: auto;
-  right: 0;
-}
-.primary-nav .submenu a {
-  color: var(--text);
-  padding: .55rem .75rem;
-  white-space: nowrap;
-}
-.primary-nav .submenu a:hover {
-  background: var(--bg-alt);
-  color: var(--accent-dark);
-}
-.primary-nav .submenu a.active {
-  background: var(--accent);
-  color: #fff;
-}
-
-@media (min-width: 769px) {
-  .primary-nav .has-children:hover > .submenu,
-  .primary-nav .has-children:focus-within > .submenu { display: flex; }
-  .primary-nav .has-children:hover > a::after { transform: rotate(-180deg); }
-}
-
-.nav-toggle {
-  display: none;
-  flex-direction: column;
-  gap: 5px;
-  background: none;
-  border: 0;
-  cursor: pointer;
-  padding: 8px;
-}
-.nav-toggle span {
-  width: 26px;
-  height: 3px;
-  background: var(--header-text);
-  border-radius: 2px;
-  transition: .25s;
-}
-
-/* ---------- Main / Page ---------- */
-main { min-height: 60vh; padding: 2.5rem 0 3.5rem; }
-.page-title {
-  font-size: 2rem;
-  margin: 0 0 1.5rem;
-  padding-bottom: .75rem;
-  border-bottom: 2px solid var(--border);
-}
-.page h2 { font-size: 1.45rem; margin-top: 2rem; }
-.page h6 { font-size: .95rem; margin: .4rem 0; color: var(--muted); }
-.page ul { padding-left: 1.4rem; }
-.page li { margin: .3rem 0; }
-
-.profile_pic {
-  float: right;
-  border-radius: 50%;
-  margin: 0 0 1rem 1.5rem;
-  width: 220px;
-  height: 220px;
-  object-fit: cover;
-  border: 4px solid var(--bg-alt);
-  box-shadow: 0 4px 16px rgba(0,0,0,.12);
-}
-
-/* ---------- Gutenberg block compatibility ---------- */
-.wp-block-group { margin: 1.5rem 0; }
-.wp-block-columns {
-  display: flex;
-  gap: 1.5rem;
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-.wp-block-columns.are-vertically-aligned-center,
-.wp-block-column.is-vertically-aligned-center { align-items: center; }
-.wp-block-column { flex: 1 1 0; min-width: 0; }
-.has-text-align-center { text-align: center; }
-.wp-block-image { margin: 0; }
-.wp-block-image img { border-radius: 6px; }
-.wp-block-quote {
-  border-left: 4px solid var(--accent);
-  margin: 0;
-  padding: .25rem 0 .25rem 1.25rem;
-  color: var(--muted);
-  font-style: italic;
-}
-.wp-block-separator {
-  max-width: 100%;
-  border-top: 1px solid var(--border);
-}
-.wp-block-separator.is-style-wide { margin: 2.5rem 0; }
-
-/* ---------- Tracker tool ---------- */
-#garminTrackerDataField { margin-top: 1.5rem; }
-
-/* ---------- Footer ---------- */
-.site-footer {
-  background: var(--header-bg);
-  color: var(--header-text);
-  padding: 2rem 0;
-  margin-top: auto;
-}
-.footer-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-.social {
-  display: flex;
-  gap: 1.1rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.social a {
-  color: var(--header-text);
-  opacity: .85;
-  display: inline-flex;
-  transition: opacity .2s, transform .2s;
-}
-.social a:hover { opacity: 1; transform: translateY(-2px); }
-.social svg { width: 24px; height: 24px; fill: currentColor; }
-.copyright { margin: 0; font-size: .85rem; opacity: .7; }
-
-/* ---------- Responsive ---------- */
-@media (max-width: 768px) {
-  .nav-toggle { display: flex; }
-  .primary-nav {
-    display: none;
-    position: absolute;
-    top: 64px;
-    left: 0;
-    right: 0;
-    background: var(--header-bg);
-    border-top: 1px solid rgba(255,255,255,.1);
-    padding: .5rem 1rem 1rem;
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f1ea;
+    --bg2:#fbf9f4;
+    --fg:#241f18;
+    --muted:#6f675b;
+    --line:rgba(36,31,24,.15);
+    --accent:#a2762e;
+    --accent-ink:#fbf9f4;
   }
-  .primary-nav.open { display: block; }
-  .primary-nav ul { flex-direction: column; gap: 0; }
-  .primary-nav li { border-radius: 0; }
-  .primary-nav > ul > li:not(:last-child) {
-    border-bottom: 1px solid rgba(255,255,255,.08);
-  }
-  .primary-nav a { border-radius: 6px; }
-  /* Accordion: submenus stay collapsed until the parent is tapped. */
-  .primary-nav .submenu {
-    position: static;
-    min-width: 0;
-    box-shadow: none;
-    border: none;
-    border-radius: 0;
-    background: rgba(255,255,255,.06);
-    margin: .15rem 0 .35rem .5rem;
-    padding: .15rem .35rem;
-  }
-  .primary-nav .submenu a { color: var(--header-text); }
-  .primary-nav .submenu a:hover { background: rgba(255,255,255,.12); color: #fff; }
-  .primary-nav .has-children > a { display: flex; justify-content: space-between; align-items: center; }
-  .profile_pic { float: none; display: block; margin: 0 auto 1.5rem; }
-  .wp-block-columns { flex-direction: column; }
 }
 
-/* ---------- Garmin Tracker output ---------- */
-#garminTrackerDataField {
-  max-width: 600px;
-  margin: 1.5em auto 0;
-  padding: 0 1em;
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
 }
-#garminTrackerDataField .loading,
-#garminTrackerDataField .error { font-size: .95rem; }
-#garminTrackerDataField .error { color: #b91c1c; }
-#garminTrackerDataField dl {
-  display: grid;
-  grid-template-columns: minmax(120px, max-content) 1fr;
-  gap: .25rem .9rem;
-  margin: .4rem 0;
+
+a{
+  color:inherit;
+  text-decoration-color:var(--line);
+  transition:color .15s ease,text-decoration-color .15s ease,border-color .15s ease,background .15s ease,filter .15s ease;
 }
-#garminTrackerDataField dt { font-weight: 600; color: var(--muted); }
-#garminTrackerDataField dd { margin: 0; }
-#garminTrackerDataField hr { margin: 1rem 0; }
+a:hover{color:var(--accent);text-decoration-color:var(--accent)}
+::selection{background:var(--accent);color:var(--accent-ink)}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+
+.skip-link{
+  position:absolute;left:-999px;top:0;z-index:100;
+  background:var(--accent);color:var(--accent-ink);
+  padding:10px 16px;border-radius:6px;text-decoration:none;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;
+}
+.skip-link:focus{left:12px;top:12px}
+
+/* mono/serif helpers ------------------------------------------------------ */
+.mono{font-family:'IBM Plex Mono',monospace}
+.serif{font-family:'IBM Plex Serif',serif}
+
+/* --------------------------------------------------------------------------
+   i18n — automatic 5-language switch (de/en/es/fr/pt, matching the language
+   set already used on apps.mmendelson.com and run.mmendelson.com) by
+   <html lang>, no URL change. Each translatable string ships all five
+   languages inline; only the one matching the document language renders.
+   The <head> script sets <html lang> from localStorage (manual override) or
+   the browser's language before first paint, so there is no flash.
+   -------------------------------------------------------------------------- */
+.t > [lang]{display:none}
+html:lang(de) .t > [lang="de"]{display:inline}
+html:lang(en) .t > [lang="en"]{display:inline}
+html:lang(es) .t > [lang="es"]{display:inline}
+html:lang(fr) .t > [lang="fr"]{display:inline}
+html:lang(pt) .t > [lang="pt"]{display:inline}
+
+/* --------------------------------------------------------------------------
+   Shared brand bar
+   -------------------------------------------------------------------------- */
+.brandbar{
+  position:sticky;top:0;z-index:50;
+  border-bottom:1px solid var(--line);
+  background:color-mix(in oklab, var(--bg) 86%, transparent);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.brandbar-inner{
+  max-width:1020px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 28px;
+}
+.brand-logo{
+  display:flex;align-items:center;gap:10px;
+  text-decoration:none;min-height:44px;color:var(--fg);
+}
+.brand-logo:hover{color:var(--accent)}
+.brand-word{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.04em}
+.brandbar-right{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+/* Below ~480px the logo + language + site switcher no longer fit on one row.
+   flex-basis:100% on .brandbar-right forces it onto its own line — an
+   explicit break point rather than relying on ambiguous nested-flex wrap
+   heuristics (a plain flex-wrap on .brandbar-inner alone did not reliably
+   wrap .brandbar-right as a unit when tested). */
+@media (max-width:480px){
+  .brandbar-inner{flex-wrap:wrap;row-gap:6px}
+  .brandbar-right{flex-basis:100%;justify-content:flex-end}
+}
+.site-switch,.lang-switch{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:13px}
+.lang-switch{padding-right:8px;margin-right:4px;border-right:1px solid var(--line)}
+.site-switch a,.lang-switch button{
+  text-decoration:none;padding:10px 12px;color:var(--muted);
+  display:inline-flex;align-items:center;min-height:44px;
+  background:none;border:0;font:inherit;font-family:inherit;cursor:pointer;
+}
+.site-switch a.active,.lang-switch button.active{color:var(--accent);border-bottom:1px solid var(--accent)}
+
+/* --------------------------------------------------------------------------
+   Main container
+   -------------------------------------------------------------------------- */
+.site-main{margin:0 auto;padding:0 28px}
+
+/* --------------------------------------------------------------------------
+   Home — hero
+   -------------------------------------------------------------------------- */
+.hero{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:36px;
+  padding:52px 0 44px;
+}
+.hero-main{flex:1 1 460px;min-width:280px}
+.hero-name{
+  margin:0;font-family:'IBM Plex Serif',serif;font-weight:500;
+  font-size:clamp(42px,6.5vw,72px);line-height:1.02;letter-spacing:-.015em;
+}
+.hero-role{
+  margin:14px 0 0;font-family:'IBM Plex Mono',monospace;font-size:14px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+}
+.hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:30px}
+.hero-portrait{
+  flex:0 0 auto;width:216px;height:264px;border-radius:10px;object-fit:cover;
+  display:block;background:var(--bg2);
+}
+
+/* CV button — single gold pill, no language stated. The PT résumé shows for
+   Portuguese; every other UI language (only an EN and a PT CV file exist)
+   falls back to the English one. */
+.btn-cv{display:inline-flex}
+.btn-cv > .btn-cv-single{display:none}
+html:lang(pt) .btn-cv > [lang="pt"]{display:inline-flex}
+html:lang(de) .btn-cv > [lang="en"],
+html:lang(en) .btn-cv > [lang="en"],
+html:lang(es) .btn-cv > [lang="en"],
+html:lang(fr) .btn-cv > [lang="en"]{display:inline-flex}
+.btn-cv-single{
+  align-items:center;min-height:44px;padding:0 20px;border-radius:6px;
+  background:var(--accent);color:var(--accent-ink);
+  font-weight:600;font-size:14px;text-decoration:none;
+}
+.btn-cv-single:hover{color:var(--accent-ink);filter:brightness(1.08)}
+.btn-ghost{
+  display:inline-flex;align-items:center;min-height:44px;padding:0 16px;
+  border:1px solid var(--line);border-radius:6px;font-size:14px;text-decoration:none;
+}
+.btn-ghost:hover{border-color:var(--accent)}
+
+/* --------------------------------------------------------------------------
+   Home — sections
+   -------------------------------------------------------------------------- */
+.sec{border-top:1px solid var(--line);padding:26px 0 60px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+.sec-num{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent)}
+.sec-label{
+  margin:0;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:13px;
+  letter-spacing:.16em;text-transform:uppercase;
+}
+.sec-intro{margin:0 0 24px;font-size:15px;color:var(--muted)}
+.more-link{
+  display:inline-flex;align-items:center;min-height:44px;margin-top:14px;
+  font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--accent);text-decoration:none;
+}
+
+/* 01 · Built & Operating */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.card{
+  display:block;padding:26px 26px 22px;border:1px solid var(--line);border-radius:10px;
+  background:var(--bg2);text-decoration:none;
+}
+.card:hover{border-color:var(--accent);color:inherit}
+.card-domain{
+  font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;
+  color:var(--muted);margin-bottom:12px;
+}
+.card-title{margin:0 0 10px;font-family:'IBM Plex Serif',serif;font-weight:500;font-size:24px;line-height:1.15}
+.card-desc{margin:0;font-size:15px;line-height:1.55;color:var(--muted);text-wrap:pretty}
+.card-visit{margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent)}
+
+/* 02 · Teaching Materials (discipline links) */
+.disc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:2px 28px}
+.disc-link{
+  display:flex;align-items:center;min-height:44px;padding:2px 4px;
+  border-bottom:1px solid var(--line);font-size:15px;text-decoration:none;
+}
+
+/* 03 · Research & Publications (preview) */
+.pubprev{display:grid;gap:0}
+.pubprev-row{
+  display:grid;grid-template-columns:56px 110px 1fr;gap:16px;align-items:baseline;
+  padding:14px 4px;border-top:1px solid var(--line);
+}
+.pubprev-row:last-child{border-bottom:1px solid var(--line)}
+.pp-year{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
+.pp-venue{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent)}
+.pp-title{font-family:'IBM Plex Serif',serif;font-size:17px;line-height:1.4;text-wrap:pretty}
+
+/* 04 · Beyond Work */
+.beyond{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;align-items:start}
+.beyond-card{padding:22px;border:1px solid var(--line);border-radius:10px}
+.bc-title{margin:0 0 6px;font-family:'IBM Plex Serif',serif;font-weight:500;font-size:19px}
+.bc-sub{margin:0 0 14px;font-size:14px;color:var(--muted)}
+.bc-chips{display:flex;flex-wrap:wrap;gap:14px;font-family:'IBM Plex Mono',monospace;font-size:13px}
+.bc-chips a{min-height:32px;display:inline-flex;align-items:center}
+.bc-list{display:grid;gap:6px;font-size:14px}
+.bc-list a{
+  min-height:28px;display:inline-flex;align-items:center;
+  text-decoration:none;border-bottom:1px solid var(--line);
+}
+.bc-list a:last-child{border-bottom:0}
+
+/* --------------------------------------------------------------------------
+   Footer (shared)
+   -------------------------------------------------------------------------- */
+.site-footer2{border-top:1px solid var(--line);background:var(--bg2)}
+.footer-inner{
+  max-width:1020px;margin:0 auto;padding:36px 28px 20px;
+  display:flex;flex-wrap:wrap;gap:32px;justify-content:space-between;
+}
+.foot-contact{display:grid;gap:8px;align-content:start}
+.foot-cardlink{font-family:'IBM Plex Mono',monospace;font-size:14px;text-decoration:none}
+.foot-social{
+  display:flex;flex-wrap:wrap;gap:4px 16px;align-content:start;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);
+}
+.foot-social a{min-height:36px;display:inline-flex;align-items:center;text-decoration:none}
+.foot-switch{display:grid;gap:4px;align-content:start;font-family:'IBM Plex Mono',monospace;font-size:13px}
+.foot-switch a{min-height:32px;display:inline-flex;align-items:center;color:var(--muted);text-decoration:none}
+.foot-switch a.active{color:var(--accent)}
+.foot-copy{
+  max-width:1020px;margin:0 auto;padding:0 28px 28px;
+  font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Content pages — page head (breadcrumb + title) + subtitle
+   -------------------------------------------------------------------------- */
+.page-head{padding:44px 0 24px}
+.breadcrumb{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);text-decoration:none}
+.page-title{
+  margin:14px 0 10px;font-family:'IBM Plex Serif',serif;font-weight:500;
+  font-size:clamp(34px,5vw,48px);line-height:1.05;letter-spacing:-.01em;
+}
+.page-sub{margin:0;font-size:15px;color:var(--muted);text-wrap:pretty;max-width:65ch}
+
+/* --------------------------------------------------------------------------
+   Teaching — accordions
+   -------------------------------------------------------------------------- */
+details.disc{border-top:1px solid var(--line);scroll-margin-top:76px}
+details.disc > summary{
+  list-style:none;display:flex;align-items:center;gap:14px;
+  min-height:60px;padding:8px 4px;cursor:pointer;
+}
+details.disc > summary::-webkit-details-marker{display:none}
+.disc-chevron{flex:none;transition:transform .18s ease;color:var(--accent)}
+details.disc[open] > summary .disc-chevron{transform:rotate(90deg)}
+.disc-name{flex:1;font-family:'IBM Plex Serif',serif;font-weight:500;font-size:20px;line-height:1.25}
+.disc-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted)}
+.disc-anchor{
+  font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--muted);text-decoration:none;
+  min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;
+}
+.disc-body{padding:2px 0 22px 26px;display:grid;gap:2px}
+.disc-item{
+  display:flex;align-items:center;gap:10px;min-height:40px;padding:2px 4px;
+  font-size:15px;text-decoration:none;border-bottom:1px solid var(--line);
+}
+.disc-item .di-title{flex:1}
+.disc-item .di-kind{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted)}
+.disc-item.indent{margin-left:22px}
+.teach-foot{
+  border-top:1px solid var(--line);padding-top:20px;margin-top:0;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted);
+}
+.teach-foot a{color:var(--accent);text-decoration:none}
+
+/* --------------------------------------------------------------------------
+   Publications
+   -------------------------------------------------------------------------- */
+.pubgroup{padding:22px 0 18px;border-top:1px solid var(--line)}
+.pubgroup-label{
+  margin:0 0 14px;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:13px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--muted);scroll-margin-top:76px;
+}
+.pub-row{
+  display:grid;grid-template-columns:56px 1fr;gap:16px;padding:14px 4px;
+  border-top:1px solid var(--line);align-items:baseline;
+}
+.pub-year{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
+.pub-body{display:grid;gap:8px}
+.pub-venue{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;color:var(--accent)}
+.pub-title{font-family:'IBM Plex Serif',serif;font-size:17px;line-height:1.4;text-wrap:pretty}
+.pub-links{display:flex;flex-wrap:wrap;gap:6px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px}
+.pub-links a{
+  min-height:32px;display:inline-flex;align-items:center;color:var(--muted);
+  text-decoration:underline;text-decoration-color:var(--line);
+}
+.pub-links a:hover{color:var(--accent);text-decoration-color:var(--accent)}
+
+/* --------------------------------------------------------------------------
+   Prose — legacy content pages wrapped in the new shell
+   -------------------------------------------------------------------------- */
+.prose{padding-bottom:72px;max-width:70ch}
+.prose :first-child{margin-top:0}
+.prose p{margin:0 0 1em;color:var(--fg)}
+.prose ul,.prose ol{margin:0 0 1em;padding-left:1.4em}
+.prose li{margin:.35em 0}
+.prose li::marker{color:var(--muted)}
+.prose a{text-decoration:underline;text-decoration-color:var(--line)}
+.prose a:hover{text-decoration-color:var(--accent)}
+.prose h2{font-family:'IBM Plex Serif',serif;font-weight:500;font-size:26px;line-height:1.2;margin:1.6em 0 .5em}
+.prose h3{font-family:'IBM Plex Serif',serif;font-weight:500;font-size:20px;line-height:1.25;margin:1.4em 0 .4em}
+.prose hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.prose img{max-width:100%;height:auto;border-radius:10px}
+.prose img.profile_pic{width:220px;height:auto}
+.prose table{width:100%;border-collapse:collapse;margin:0 0 1.5em;font-size:14px}
+.prose th,.prose td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.prose th{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.prose code{font-family:'IBM Plex Mono',monospace;font-size:.9em;background:var(--bg2);padding:.1em .35em;border-radius:4px}
+.prose input,.prose button{font-family:inherit;font-size:14px;color:var(--fg);background:var(--bg2);border:1px solid var(--line);border-radius:6px}
+.prose input{padding:8px 10px}
+.prose button{padding:8px 14px;cursor:pointer}
+.prose button:hover{border-color:var(--accent)}
+
+@media (max-width:560px){
+  .pubprev-row{grid-template-columns:52px 1fr}
+  .pubprev-row .pp-title{grid-column:1 / -1}
+}

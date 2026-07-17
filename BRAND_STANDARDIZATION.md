@@ -138,6 +138,31 @@ findings are in the "Current state audit" section below.
    publication titles, discipline names, kind-tags, the fga/iesb/projecao
    teaching-institution pages).
 
+8. **The pre-redesign `website` code is deleted, not just disabled.** The
+   `SITE_VERSION` build flag (`"new"` vs. `"legacy"`) was built as a rollback
+   safety net while the redesign was unproven; user confirmed it can now be
+   dropped. Removed: `SITE_VERSION`/`CONTENT_NEW`, the legacy `PAGES`/`NAV`/
+   `SOCIAL` tables, `build_legacy()`/`render_page()` (old)/`build_nav()`/
+   `build_social()`, `templates/base.html` (old shell), `assets/css/
+   style.css` (old styles, since renamed — see below), `assets/js/main.js`,
+   and the now-fully-superseded `content/home.html`/`teaching.html`/
+   `publications.html`/`extra-resources.html`. Also dropped as a direct,
+   mechanical consequence (only ever referenced by the files just removed):
+   5 orphaned `cropped-*` image assets and their entries in
+   `ASSETS_NEEDED.md`/`tools/fetch_assets.sh`.
+   **Renamed** (the "new" design is now the only one, so the `_new` suffix
+   stopped meaning anything): `templates/base_new.html` → `templates/
+   base.html`, `assets/css/style_new.css` → `assets/css/style.css`,
+   `assets/js/site_new.js` → `assets/js/site.js`, `content/new/{home,
+   teaching,publications}.html` → `content/{home,teaching,publications}.html`
+   (flattened — `content/new/` no longer exists, so `build.py` no longer
+   needs a two-tier content lookup). `NEW_PAGES`/`build_new()`/
+   `render_new_page()`/`new_content_path()` renamed to `PAGES`/`build()`/
+   `render_page()` (dropped `new_content_path()` entirely — direct
+   `content/<slug>.html` reads now that there's only one copy). Verified via
+   full rebuild + structural diff that output is unchanged apart from the
+   intentional asset URL renames.
+
 ## Current state audit (source of the facts above — for reference, not re-reading required)
 
 <details>
@@ -246,15 +271,15 @@ findings are in the "Current state audit" section below.
 <details>
 <summary>website / mmendelson.com (hub — already largely done)</summary>
 
-Already shipped this session, for reference: `templates/base_new.html` +
-`assets/css/style_new.css` carry the "brandbar" (staircase logo mark, mono
+Already shipped this session, for reference: `templates/base.html` +
+`assets/css/style.css` carry the "brandbar" (staircase logo mark, mono
 wordmark, sticky/blurred, Home/Apps/Run switcher) and a matching footer
 (contact link, social row, site switcher, copyright) — this is the
 **structural pattern Phases 2 and 3 below reuse**, just re-accented and
 re-logo'd per site. Fonts: IBM Plex Serif/Sans/Mono via Google Fonts,
-already the sitewide standard. i18n: automatic EN/PT via a `<head>` script
-(`document.documentElement.lang = /^pt\b/i.test(navigator.language...) ?
-'pt' : 'en'`) + CSS `:lang()` selectors toggling `<span lang="en">`/
+already the sitewide standard. i18n: automatic 5-language (de/en/es/fr/pt)
+via a `<head>` script checking `localStorage.mm_lang` then
+`navigator.language` + CSS `:lang()` selectors toggling `<span lang="en">`/
 `<span lang="pt">` pairs — Phase 1 extends this with a manual override.
 
 </details>
