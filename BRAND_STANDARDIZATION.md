@@ -1,5 +1,9 @@
 # Visual identity standardization — mmendelson.com family
 
+**Status: COMPLETE (2026-07-17).** All phases landed and verified; see the
+"Family path map (final)", "Final token table" and "Plan-vs-results audit"
+sections at the bottom for the definitive end state.
+
 **Status doc for a cross-repo initiative spanning `website` (hub), `apps-website`
 (apps.mmendelson.com) and `corridas` (run.mmendelson.com).** This file is the
 resumable source of truth: if a session runs out of budget or hits an error
@@ -294,7 +298,7 @@ via a `<head>` script checking `localStorage.mm_lang` then
 - [x] `TaskCreate` entries mirroring Phases 1–4 below, so task state and this
       doc's checkboxes stay in sync (update both when a phase lands).
 
-### Phase 1 — Hub: manual 5-language selector (`website`) — DONE, pending merge
+### Phase 1 — Hub: manual 5-language selector (`website`) — DONE, live
 - [x] Add a `DE EN ES FR PT` control to `.brandbar` (mono font, matches
       `.site-switch` visual language; wraps to its own line below 480px via
       an explicit `flex-basis:100%` break point — plain `flex-wrap` on the
@@ -321,18 +325,18 @@ via a `<head>` script checking `localStorage.mm_lang` then
       fga stays in its original language regardless of UI language; verified
       the legacy (`SITE_VERSION=legacy`) build is unaffected.
 - [x] Update `website/README.md` (new "Language support" section).
-- [ ] Reconcile with `main`, commit, PR → merge → verify live on
+- [x] Reconcile with `main`, commit, PR → merge → verify live on
       mmendelson.com (all 5 languages + the button UI).
 
 ### Phase 2 — Apps: token foundation + shared chrome (`apps-website`)
 Split into small PRs per subject, same discipline as prior work in this repo:
-- [ ] **2a — Fonts.** Add IBM Plex Serif/Sans/Mono (Google Fonts link) to
+- [x] **2a — Fonts.** Add IBM Plex Serif/Sans/Mono (Google Fonts link) to
       `index.html` + all 5 locale copies + `tracker/index.html` +
       `live_tracker/index.html` + `404.html` + `privacy_policy/*`. Swap
       `body{font-family:system-ui,sans-serif}` → IBM Plex Sans; add IBM Plex
       Serif for the `<h1>` title to match the hub/run serif-display
       convention; IBM Plex Mono anywhere numeric (carousel stats, if any).
-- [ ] **2b — Design tokens + accent.** Introduce a sitewide `:root` in
+- [x] **2b — Design tokens + accent.** Introduce a sitewide `:root` in
       `visual.css` (`--bg,--bg2,--fg,--muted,--line,--accent:#3b82f6,
       --accent-ink`, light/dark via `prefers-color-scheme`), replacing
       hardcoded `#111/#1a1a1a/#eee/#444/#555` where safe. Reconcile the three
@@ -343,13 +347,13 @@ Split into small PRs per subject, same discipline as prior work in this repo:
       necessarily a shared stylesheet — decide during implementation based on
       how much refactor risk touching `live_tracker`'s complex inline styles
       is worth).
-- [ ] **2c — Favicon.** Replace `assets/favicon.jpg` (wrong-MIME JPEG) with a
+- [x] **2c — Favicon.** Replace `assets/favicon.jpg` (wrong-MIME JPEG) with a
       proper multi-format set (`.ico` + 32/180/192 PNG), same discipline as
       the hub's `favicon.ico`/`favicon-*.png`. Default proposal: reuse the
       hub's staircase mark, recolored to Apps' blue accent (Apps wasn't
       singled out for its own mascot the way Run was) — flag as adjustable.
       Fix the MIME-type mismatches across all pages while touching this.
-- [ ] **2d — Brand bar + footer.** Add the shared brand-bar structural
+- [x] **2d — Brand bar + footer.** Add the shared brand-bar structural
       pattern (logo mark + Home/Apps/Run switcher, Apps' blue accent) above
       or integrated with the existing `<h1>Garmin Apps</h1>` + language
       dropdown + hamburger nav — **keep all three of those intact**, just
@@ -357,38 +361,38 @@ Split into small PRs per subject, same discipline as prior work in this repo:
       pattern (social row + site switcher + copyright) — default proposal:
       same social set as the hub for consistency (same person); flag as
       adjustable if a Garmin-apps-specific subset is preferred.
-- [ ] Update `apps-website/README.md`: new token doc + full path map
+- [x] Update `apps-website/README.md`: new token doc + full path map
       (all top-level paths: `/`, `/{lang}/`, `/tracker/`, `/live_tracker/`,
       `/policy/`, `/privacy/`, `/privacy_policy/{lang}/`, `/404`).
-- [ ] PR(s) → merge → verify live on apps.mmendelson.com.
+- [x] PR(s) → merge → verify live on apps.mmendelson.com.
 
 ### Phase 3 — Run: colors + fonts + chrome + refresh removal + shoe favicon (`corridas`)
 Biggest phase; split per `corridas`'s strict one-PR-per-subject convention:
-- [ ] **3a — Remove the refresh button.** Delete `#btnRefresh` markup from
+- [x] **3a — Remove the refresh button.** Delete `#btnRefresh` markup from
       all 5 `web/{lang}/index.html`, its `app.js:2029-2035` listener, unused
       `refreshAriaLabel` i18n strings. Verify `@keyframes spin`/
       `.btn-refresh` CSS isn't reused elsewhere before deleting. Note the
       flagged trade-off (decision 5 above) in the PR description.
-- [ ] **3b — Fonts.** Add IBM Plex Serif/Sans/Mono to all 5 locale shells +
+- [x] **3b — Fonts.** Add IBM Plex Serif/Sans/Mono to all 5 locale shells +
       `gallery/index.html`. Swap `--font-display` → IBM Plex Sans,
       `--font-mono` → IBM Plex Mono. Decide during implementation whether
       `gallery/`'s Archivo/Spectral editorial pair is unified too (instructed
       as "same font across all systems" — default: yes, unify it) or kept as
       a deliberately distinct sub-experience (flag if keeping).
-- [ ] **3c — Ember accent + token cleanup.** Set `--color-accent:#e0693a`
+- [x] **3c — Ember accent + token cleanup.** Set `--color-accent:#e0693a`
       (or the final agreed hex), shift `--color-bg`/`--color-surface*` to the
       cooler near-black family (`#0e1013`-ish), drop the two confirmed-dead
       vars (`--color-gray`, `--color-fotos*`). Leave World-Athletics badge
       gradients alone (real external meaning). Align `gallery/`'s independent
       `#0f1115`/`#E4572E` palette to the same tokens.
-- [ ] **3d — Shared brand-bar chrome.** Add a Home/Apps cross-link pair in
+- [x] **3d — Shared brand-bar chrome.** Add a Home/Apps cross-link pair in
       the new standardized style (Run currently has *no* link to the hub at
       all) alongside the existing 📍/🌐 controls (kept, they're app
       functionality, not chrome) — likely replacing/absorbing the current
       standalone `.btn-apps`. Extend the footer with the shared social-row +
       site-switcher block, **alongside** (not replacing) the existing about
       blurb + `.footer-langs` nav.
-- [ ] **3e — Shoe favicon.** Build a small script (Python or Node, alongside
+- [x] **3e — Shoe favicon.** Build a small script (Python or Node, alongside
       the existing `scripts/`) that derives a simplified static
       `web/shoe-favicon.svg` from `shoe-wear.js`'s `SVG_MARKUP` (3–4 legible
       wear-marks, not all ~15) with an embedded `<style>`
@@ -397,23 +401,113 @@ Biggest phase; split per `corridas`'s strict one-PR-per-subject convention:
       favicon links (kept as fallback) in all 5 locale shells + gallery.
       Verify: renders + animates in a headless-Chromium screenshot check;
       document the Safari-static-fallback caveat in the PR + README.
-- [ ] Update `corridas/CLAUDE.md` and/or `README.md`: new token values, the
+- [x] Update `corridas/CLAUDE.md` and/or `README.md`: new token values, the
       removed refresh button + trade-off, the favicon mechanism + source
       script, full path map recap (this repo's paths are all within
       `web/{lang}/`, `web/gallery/`, plus the redirect-style ones already
       documented in `data-pipeline`/routing sections if any — confirm there's
       nothing else to map here, since `corridas` doesn't have the
       redirect-table pattern `website` has).
-- [ ] Each sub-phase: its own PR, draft-PR-immediately + CI-green +
+- [x] Each sub-phase: its own PR, draft-PR-immediately + CI-green +
       auto-merge per this repo's existing workflow rules.
+      (Landed as corridas PRs: 3a #877, 3b #879, 3c #880, 3d #885, 3e #887.)
 
 ### Phase 4 — Cross-repo path map finalization
-- [ ] Once Phases 1–3 are live, add/refresh a consolidated "family path map"
+- [x] Once Phases 1–3 are live, add/refresh a consolidated "family path map"
       table here (this file) listing every top-level path across all three
       domains plus the shared token values, so this doc is the definitive
-      up-to-date reference (not just the plan).
-- [ ] Cross-check the pointers added in Phase 0 still resolve and reflect
-      final state.
+      up-to-date reference (not just the plan). → See "Family path map
+      (final)" and "Final token table" below.
+- [x] Cross-check the pointers added in Phase 0 still resolve and reflect
+      final state. (`apps-website/README.md` "Visual identity" section and
+      `corridas/CLAUDE.md`'s standardization paragraph both link here;
+      `corridas/README.md` gained its own "Identidade visual" section in 3e.)
+
+## Family path map (final)
+
+Every public top-level path across the three domains, post-standardization.
+Per-repo detail: `website/README.md`, `apps-website/README.md` (Path map),
+`corridas/docs/site-map.md`.
+
+### mmendelson.com (hub — repo `website`, generated by `build.py` → `dist/`)
+
+| Path | What it is |
+|---|---|
+| `/` | Home (hero, In Production, Teaching, Publications, Beyond Work). Single URL for all 5 languages — content toggles via `<html lang>` + CSS `:lang()`; manual `DE EN ES FR PT` switch in the brand bar persists `localStorage.mm_lang`. |
+| `/teaching/`, `/publications/`, `/off/`, `/music-sheets/`, `/a-coxinha/`, `/cv/`, `/fga/`, `/iesb/`, `/projecao/` | Content pages (same single-URL i18n; fga/iesb/projecao deliberately single-language). |
+| `/tracker/`, `/track/`, `/tracker-data/`, `/tracker-data-field/` | Redirects → `apps.mmendelson.com/tracker/`, **preserving `?trackId=` query + hash**. |
+| other legacy paths | Plain redirects per `REDIRECTS` in `build.py`. |
+
+### apps.mmendelson.com (repo `apps-website`, static, no build)
+
+| Path | What it is |
+|---|---|
+| `/` | Language detector → `/{lang}/` |
+| `/de/ /en/ /es/ /fr/ /pt/` | Apps showcase (6 byte-identical copies; strings swapped by `assets/js/i18n.js`) |
+| `/tracker/` | Garmin Tracker Data Field companion (`?trackId=…`; migrated from mmendelson.com/tracker) |
+| `/live_tracker/` | Real-time LiveTrack map follower (renamed from `/tracker/`; `?user=<user>`) |
+| `/tracker/<user>`, `/live_tracker/<user>` | Caught by `404.html` → `/live_tracker/?user=<user>` (legacy share links) |
+| `/privacy_policy/{lang}/` | Localized privacy policy (generated by `scripts/gen-privacy-policy.js`) |
+| `/privacy_policy/ /policy/ /privacy/` | Language-detecting redirect stubs |
+| `/404.html` | Pretty-URL router + fallback |
+
+### run.mmendelson.com (repo `corridas`, static `web/`, Cloudflare Pages)
+
+| Path | What it is |
+|---|---|
+| `/` | Language splash → `/{lang}` |
+| `/pt/ /en/ /es/ /de/ /fr/` | The race-calendar app (5 pre-rendered shells + shared `app.js`) |
+| `/gallery` | Personal activities timeline (noindex, same-URL i18n) |
+| `/favorites* /highlights*` | 301 → `/gallery` |
+| `/shoe-favicon.svg` | Animated shoe favicon (generated; see 3e) |
+
+## Final token table
+
+| | Hub | Apps | Run |
+|---|---|---|---|
+| Accent | `#d3a24f` gold | `#3b82f6` blue | `#e0693a` ember |
+| Background | `#151210` warm near-black (light theme too, via `prefers-color-scheme`) | `#111` (dark only) | `#0f1115` cool near-black (dark only) |
+| Surfaces | `#1d1a16` | `#1a1a1a` / `#444` | `#171b22` / `#21262f` |
+| Fonts | IBM Plex Serif / Sans / Mono | same | same |
+| Brand mark | staircase (currentColor SVG; raster favicon = user's exact image) | staircase raster favicon set | shoe mascot (`shoe-wear.js`, single source of truth) + animated SVG favicon |
+| Chrome | sticky brand bar + structured footer | static brand bar + footer (classed divs) | static brand bar + footer (classed divs) |
+
+## Plan-vs-results audit (Phase 4 close-out)
+
+Line-by-line check of every phase item against what actually shipped.
+Everything landed; deviations are listed explicitly:
+
+1. **Hub language scope grew beyond the original plan** — decision 7 already
+   records this: EN/PT-only became DE/EN/ES/FR/PT mid-build per user
+   instruction. Shipped as revised.
+2. **Apps 2b: no light theme.** The plan said "light/dark via
+   `prefers-color-scheme`"; the main site was and remains dark-only, so
+   tokens were introduced dark-only ("replacing hardcoded values *where
+   safe*" — adding a light theme would have been a redesign, not a
+   standardization). `/tracker/` kept its existing light/dark support, now
+   token-based.
+3. **Apps 2c: favicon is the user's exact staircase image, resize-only** —
+   not the "recolored to Apps' blue" default proposal. The user explicitly
+   rejected recoloring ("just use it"). The plan flagged the proposal as
+   adjustable; it was adjusted.
+4. **2d/3d: brand bars on Apps and Run are static (scroll away), not sticky
+   like the hub's** — deliberate, so each app's own nav keeps sticky
+   `top:0`. Implemented as classed `div`s to avoid each site's
+   `<header>/<nav>` element styling.
+5. **3b: gallery's Archivo/Spectral was unified** to IBM Plex (the plan's
+   default), not kept as a distinct sub-experience.
+6. **3c: backgrounds settled on `#0f1115`** (the gallery's existing cool
+   near-black) rather than the plan's illustrative `#0e1013-ish` — same
+   family, chosen so the main app and gallery converge on one existing hex.
+7. **3e: favicon also wired into the root splash** (`web/index.html`) and
+   documented in `corridas/README.md` + `docs/site-map.md`, slightly beyond
+   the plan's "5 shells + gallery".
+8. **Safari caveat** (decision 6) holds and is documented in the generator
+   header, the corridas README and PR #887: static first frame, raster
+   fallbacks kept.
+9. **Refresh-button trade-off** (decision 5) shipped as flagged: no
+   auto-refresh timer exists, so fresh data requires a page reload;
+   documented in corridas README + PR #877.
 
 ## How to resume this if a session drops mid-phase
 
