@@ -23,28 +23,42 @@
   openFromHash();
 })();
 
-// Manual EN/PT language switch: overrides the automatic browser-language
-// detection (set inline in <head>, before paint) without changing the URL.
-// The choice persists in localStorage so it survives reloads and other pages.
+// Manual language switch (🌐 globe dropdown, same pattern as the sister
+// sites): overrides the automatic browser-language detection (set inline in
+// <head>, before paint) without changing the URL. The choice persists in
+// localStorage so it survives reloads and other pages.
 (function () {
-  var buttons = document.querySelectorAll('.lang-switch [data-lang]');
-  if (!buttons.length) return;
+  var globe = document.querySelector('.lang-globe');
+  if (!globe) return;
+  var btn = globe.querySelector('.lang-globe-btn');
+  var options = globe.querySelectorAll('[data-lang]');
 
   function sync() {
     var current = document.documentElement.lang;
-    buttons.forEach(function (b) {
-      var active = b.getAttribute('data-lang') === current;
-      b.classList.toggle('active', active);
-      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+    options.forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-lang') === current);
     });
   }
 
-  buttons.forEach(function (b) {
+  function close() {
+    globe.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+  }
+
+  btn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = globe.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  document.addEventListener('click', close);
+
+  options.forEach(function (b) {
     b.addEventListener('click', function () {
       var lang = b.getAttribute('data-lang');
       document.documentElement.lang = lang;
       try { localStorage.setItem('mm_lang', lang); } catch (e) { /* privacy mode */ }
       sync();
+      close();
     });
   });
 

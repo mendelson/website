@@ -106,14 +106,34 @@ html:lang(pt) .t > [lang="pt"]{display:inline}
   .brandbar-inner{flex-wrap:wrap;row-gap:6px}
   .brandbar-right{flex-basis:100%;justify-content:flex-end}
 }
-.site-switch,.lang-switch{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:13px}
-.lang-switch{padding-right:8px;margin-right:4px;border-right:1px solid var(--line)}
-.site-switch a,.lang-switch button{
+.site-switch{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:13px}
+.site-switch a{
   text-decoration:none;padding:10px 12px;color:var(--muted);
   display:inline-flex;align-items:center;min-height:44px;
-  background:none;border:0;font:inherit;font-family:inherit;cursor:pointer;
 }
-.site-switch a.active,.lang-switch button.active{color:var(--accent);border-bottom:1px solid var(--accent)}
+.site-switch a.active{color:var(--accent);border-bottom:1px solid var(--accent)}
+/* Globe language selector — same pattern as the sister sites' 🌐 control:
+   one button, dropdown with the language names, no URL change. */
+.lang-globe{position:relative}
+.lang-globe-btn{
+  min-width:44px;min-height:44px;background:none;border:0;cursor:pointer;
+  font-size:17px;color:var(--muted);
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.lang-globe-btn:hover{color:var(--accent)}
+.lang-globe-menu{
+  display:none;position:absolute;right:0;top:calc(100% + 4px);
+  background:var(--bg2);border:1px solid var(--line);border-radius:10px;
+  min-width:150px;padding:4px 0;box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:50;
+}
+.lang-globe.open .lang-globe-menu{display:block}
+.lang-globe-menu button{
+  display:block;width:100%;text-align:left;padding:10px 16px;
+  background:none;border:0;cursor:pointer;color:var(--muted);
+  font-family:'IBM Plex Mono',monospace;font-size:13px;
+}
+.lang-globe-menu button:hover{color:var(--fg);background:rgba(255,255,255,.05)}
+.lang-globe-menu button.active{color:var(--accent)}
 
 /* --------------------------------------------------------------------------
    Main container
