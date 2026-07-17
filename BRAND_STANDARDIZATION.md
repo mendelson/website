@@ -120,12 +120,23 @@ findings are in the "Current state audit" section below.
    blocker, but the user should know going in, since "if possible" was the
    framing.
 
-7. **Manual language selector, hub only.** A small `EN | PT` control in the
-   hub's brand bar. Click sets `document.documentElement.lang` and persists
-   the explicit choice (`localStorage`); the existing auto-detect `<head>`
-   script checks the stored override first, falling back to
-   `navigator.language` only if none is set. Zero routing change (see
-   decision 3).
+7. **Manual language selector, hub only — expanded to all 5 languages
+   (revised, superseding the original EN/PT-only scope).** Initial build was
+   a 2-option `EN | PT` toggle; user clarified mid-build: "they" (apps/run)
+   already support all 5 languages (de/en/es/fr/pt) via URL-fork folders —
+   *replicate that language coverage into the hub*, using the button
+   mechanism (not folders) as the delivery method. Landed as: a `DE EN ES FR
+   PT` control in the hub's brand bar. Click sets
+   `document.documentElement.lang` and persists the explicit choice
+   (`localStorage.mm_lang`); the `<head>` script checks the stored override
+   first, else detects from `navigator.language` against the same 5-code
+   list apps.mmendelson.com's own i18n.js uses. All hub content translated
+   into DE/ES/FR (previously only EN/PT existed) — see decision 3 for the
+   explicit scope boundary (hub only; apps/run's existing URL-fork i18n is
+   untouched) and `website/README.md`'s "Language support" section for the
+   full mechanism + what's deliberately left untranslated (proper nouns,
+   publication titles, discipline names, kind-tags, the fga/iesb/projecao
+   teaching-institution pages).
 
 ## Current state audit (source of the facts above — for reference, not re-reading required)
 
@@ -252,24 +263,41 @@ already the sitewide standard. i18n: automatic EN/PT via a `<head>` script
 
 ### Phase 0 — this doc + cross-links
 - [x] Write and commit this file (`website/BRAND_STANDARDIZATION.md`).
-- [ ] Add a one-line pointer to it in `apps-website/README.md`.
-- [ ] Add a one-line pointer to it in `corridas/CLAUDE.md` (its living
+- [x] Add a one-line pointer to it in `apps-website/README.md`.
+- [x] Add a one-line pointer to it in `corridas/CLAUDE.md` (its living
       architecture doc — more likely to be read there than a README).
-- [ ] `TaskCreate` entries mirroring Phases 1–4 below, so task state and this
+- [x] `TaskCreate` entries mirroring Phases 1–4 below, so task state and this
       doc's checkboxes stay in sync (update both when a phase lands).
 
-### Phase 1 — Hub: manual EN/PT selector (`website`, small, self-contained)
-- [ ] Add an `EN | PT` control to `.brandbar` (mono font, matches
-      `.site-switch` visual language).
-- [ ] `<head>` script: check `localStorage.mm_lang` first, fall back to the
-      existing `navigator.language` regex if unset.
-- [ ] Click handler: set `document.documentElement.lang`, persist to
-      `localStorage.mm_lang`, no navigation/reload.
-- [ ] Verify both language states render correctly (screenshot check, both
-      themes) and that the override survives a page reload.
-- [ ] Update `website/README.md` (i18n section) to describe the manual
-      override + storage key.
-- [ ] PR → merge → verify live on mmendelson.com.
+### Phase 1 — Hub: manual 5-language selector (`website`) — DONE, pending merge
+- [x] Add a `DE EN ES FR PT` control to `.brandbar` (mono font, matches
+      `.site-switch` visual language; wraps to its own line below 480px via
+      an explicit `flex-basis:100%` break point — plain `flex-wrap` on the
+      ancestor alone did not reliably wrap the whole `.brandbar-right` group
+      in testing, see the CSS comment).
+- [x] `<head>` script: check `localStorage.mm_lang` first, fall back to
+      `navigator.language` against `['de','en','es','fr','pt']` (matching
+      apps.mmendelson.com's own list), default `en`.
+- [x] Click handler: set `document.documentElement.lang`, persist to
+      `localStorage.mm_lang`, no navigation/reload (`assets/js/site_new.js`).
+- [x] Translate all hub `.t` groups into DE/ES/FR (previously EN/PT only):
+      home.html (19 groups), teaching.html (12, incl. 9× "items"),
+      publications.html (5), template footer/breadcrumb. Wrapped the small
+      legacy prose pages (`off`, `music-sheets`, `a-coxinha`) in `.t` for the
+      first time (5 languages each). Left `cv.html` unwrapped (deliberately
+      shows both real CV files' own language names, unaffected by UI
+      language) and `fga`/`iesb`/`projecao` untouched (turns out already
+      English-authored, not Portuguese as assumed — even easier to justify
+      leaving as single-language).
+- [x] CV button: added a CSS fallback so `de`/`es`/`fr` show the English CV
+      link (only EN/PT files exist).
+- [x] Verified all 5 language states render correctly (screenshot check,
+      dark theme) on home/teaching/publications/a-coxinha; verified
+      fga stays in its original language regardless of UI language; verified
+      the legacy (`SITE_VERSION=legacy`) build is unaffected.
+- [x] Update `website/README.md` (new "Language support" section).
+- [ ] Reconcile with `main`, commit, PR → merge → verify live on
+      mmendelson.com (all 5 languages + the button UI).
 
 ### Phase 2 — Apps: token foundation + shared chrome (`apps-website`)
 Split into small PRs per subject, same discipline as prior work in this repo:

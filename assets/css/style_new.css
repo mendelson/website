@@ -61,13 +61,18 @@ a:hover{color:var(--accent);text-decoration-color:var(--accent)}
 .serif{font-family:'IBM Plex Serif',serif}
 
 /* --------------------------------------------------------------------------
-   i18n — automatic EN/PT switch by <html lang> (no URL change).
-   Each translatable string ships both languages inline; only the one matching
-   the document language renders. The <head> script sets <html lang> from the
-   browser before first paint, so there is no flash.
+   i18n — automatic 5-language switch (de/en/es/fr/pt, matching the language
+   set already used on apps.mmendelson.com and run.mmendelson.com) by
+   <html lang>, no URL change. Each translatable string ships all five
+   languages inline; only the one matching the document language renders.
+   The <head> script sets <html lang> from localStorage (manual override) or
+   the browser's language before first paint, so there is no flash.
    -------------------------------------------------------------------------- */
 .t > [lang]{display:none}
+html:lang(de) .t > [lang="de"]{display:inline}
 html:lang(en) .t > [lang="en"]{display:inline}
+html:lang(es) .t > [lang="es"]{display:inline}
+html:lang(fr) .t > [lang="fr"]{display:inline}
 html:lang(pt) .t > [lang="pt"]{display:inline}
 
 /* --------------------------------------------------------------------------
@@ -91,12 +96,24 @@ html:lang(pt) .t > [lang="pt"]{display:inline}
 }
 .brand-logo:hover{color:var(--accent)}
 .brand-word{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.04em}
-.site-switch{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:13px}
-.site-switch a{
+.brandbar-right{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+/* Below ~480px the logo + language + site switcher no longer fit on one row.
+   flex-basis:100% on .brandbar-right forces it onto its own line — an
+   explicit break point rather than relying on ambiguous nested-flex wrap
+   heuristics (a plain flex-wrap on .brandbar-inner alone did not reliably
+   wrap .brandbar-right as a unit when tested). */
+@media (max-width:480px){
+  .brandbar-inner{flex-wrap:wrap;row-gap:6px}
+  .brandbar-right{flex-basis:100%;justify-content:flex-end}
+}
+.site-switch,.lang-switch{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:13px}
+.lang-switch{padding-right:8px;margin-right:4px;border-right:1px solid var(--line)}
+.site-switch a,.lang-switch button{
   text-decoration:none;padding:10px 12px;color:var(--muted);
   display:inline-flex;align-items:center;min-height:44px;
+  background:none;border:0;font:inherit;font-family:inherit;cursor:pointer;
 }
-.site-switch a.active{color:var(--accent);border-bottom:1px solid var(--accent)}
+.site-switch a.active,.lang-switch button.active{color:var(--accent);border-bottom:1px solid var(--accent)}
 
 /* --------------------------------------------------------------------------
    Main container
@@ -125,12 +142,16 @@ html:lang(pt) .t > [lang="pt"]{display:inline}
   display:block;background:var(--bg2);
 }
 
-/* CV button — single gold pill, no language stated. The PT link shows for
-   Portuguese, the English one otherwise (language-switched, same label). */
+/* CV button — single gold pill, no language stated. The PT résumé shows for
+   Portuguese; every other UI language (only an EN and a PT CV file exist)
+   falls back to the English one. */
 .btn-cv{display:inline-flex}
 .btn-cv > .btn-cv-single{display:none}
-html:lang(en) .btn-cv > [lang="en"],
 html:lang(pt) .btn-cv > [lang="pt"]{display:inline-flex}
+html:lang(de) .btn-cv > [lang="en"],
+html:lang(en) .btn-cv > [lang="en"],
+html:lang(es) .btn-cv > [lang="en"],
+html:lang(fr) .btn-cv > [lang="en"]{display:inline-flex}
 .btn-cv-single{
   align-items:center;min-height:44px;padding:0 20px;border-radius:6px;
   background:var(--accent);color:var(--accent-ink);

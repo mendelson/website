@@ -64,6 +64,53 @@ either way — both designs live in the repo.
 
 Re-run `python3 build.py` after any change.
 
+## Language support (redesign only)
+
+The redesign (`SITE_VERSION = "new"`) supports **five languages — German,
+English, Spanish, French, Portuguese** — matching the set already used on
+apps.mmendelson.com and run.mmendelson.com, but via a different mechanism:
+**one URL per page, no `/de/ /en/ /es/ /fr/ /pt/` folders.** Every
+translatable string ships all five languages inline as
+`<span class="t"><span lang="en">…</span><span lang="de">…</span>
+<span lang="es">…</span><span lang="fr">…</span><span lang="pt">…</span></span>`;
+CSS (`html:lang(xx) .t > [lang="xx"]{display:inline}` in `style_new.css`)
+shows only the one matching `<html lang>`. This keeps a single canonical URL
+per page (no hreflang/sitemap fan-out, no duplicate content across five
+folders) at the cost of not having language-specific URLs to share/index —
+right tradeoff for a low-traffic personal hub, wrong one for
+apps/run's larger content volume, which is why those two keep their existing
+per-language folders.
+
+- **Detection**: a `<head>` script (in `templates/base_new.html`) checks
+  `localStorage.mm_lang` first; if unset, it falls back to
+  `navigator.language`, matching apps.mmendelson.com's own detection list
+  (`['de','en','es','fr','pt']`, default `en`). Runs before first paint, so
+  there's no flash.
+- **Manual override**: the `DE EN ES FR PT` control in the brand bar
+  (`.lang-switch`) lets a visitor pick any of the five regardless of browser
+  language. Click sets `document.documentElement.lang` and persists the
+  choice to `localStorage.mm_lang` (`assets/js/site_new.js`) — no navigation,
+  no reload.
+- **What's translated**: UI chrome and descriptive copy (section labels,
+  intros, buttons, breadcrumbs, page titles/subtitles, the small `off/
+  music-sheets/a-coxinha` prose pages). **Not translated, by design**:
+  proper nouns, product/brand names, academic publication titles and venues,
+  teaching discipline names, and file-format "kind" tags (`slides`/`folder`/
+  `notebook`/…) — translating these would misrepresent them or add
+  churn-prone busywork for no reader benefit. The `fga`/`iesb`/`projecao`
+  teaching-institution pages are also left as a single language (their
+  existing content, inherited from the original site) rather than
+  translated — same reasoning.
+- **CV button**: only an English and a Portuguese résumé file exist. The
+  button shows the Portuguese one for `pt`, and falls back to the English
+  one for every other language (`de`/`en`/`es`/`fr`) — see the CSS comment
+  above `.btn-cv` in `style_new.css`.
+- **Adding a sixth language**: add a `<span lang="xx">` to every `.t` group
+  (search for the pattern above), add the CSS `html:lang(xx) .t >
+  [lang="xx"]{display:inline}` rule, add `xx` to the `langs` array in the
+  `<head>` detection script, and add a button to `.lang-switch` in
+  `templates/base_new.html`.
+
 ## Media assets
 
 The repo ships **placeholder** images/PDFs so the layout renders immediately.

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script>document.documentElement.lang=/^pt\b/i.test(navigator.language||navigator.userLanguage||'en')?'pt':'en';</script>
+  <script>(function(){var langs=['de','en','es','fr','pt'];var s;try{s=localStorage.getItem('mm_lang');}catch(e){}if(langs.indexOf(s)<0){var b=((navigator.language||navigator.userLanguage||'en')+'').toLowerCase().split('-')[0];s=langs.indexOf(b)>=0?b:'en';}document.documentElement.lang=s;})();</script>
   <title>{{TITLE}}</title>
   <meta name="description" content="{{DESC}}">
   <link rel="canonical" href="{{SITE}}{{URL}}">
@@ -34,11 +34,20 @@
         </svg>
         <span class="brand-word">mmendelson.com</span>
       </a>
-      <nav class="site-switch" aria-label="Sister sites">
-        <a href="{{BASE}}/" aria-current="page" class="active">Home</a>
-        <a href="https://apps.mmendelson.com">Apps</a>
-        <a href="https://run.mmendelson.com">Run</a>
-      </nav>
+      <div class="brandbar-right">
+        <nav class="lang-switch" aria-label="Language">
+          <button type="button" data-lang="de">DE</button>
+          <button type="button" data-lang="en">EN</button>
+          <button type="button" data-lang="es">ES</button>
+          <button type="button" data-lang="fr">FR</button>
+          <button type="button" data-lang="pt">PT</button>
+        </nav>
+        <nav class="site-switch" aria-label="Sister sites">
+          <a href="{{BASE}}/" aria-current="page" class="active">Home</a>
+          <a href="https://apps.mmendelson.com">Apps</a>
+          <a href="https://run.mmendelson.com">Run</a>
+        </nav>
+      </div>
     </div>
   </header>
 
@@ -49,7 +58,7 @@
   <footer class="site-footer2">
     <div class="footer-inner">
       <div class="foot-contact">
-        <a class="foot-cardlink" href="https://taggo.one/mmendelson" target="_blank" rel="noopener"><span class="t"><span lang="en">Contact ↗</span><span lang="pt">Contato ↗</span></span></a>
+        <a class="foot-cardlink" href="https://taggo.one/mmendelson" target="_blank" rel="noopener"><span class="t"><span lang="en">Contact ↗</span><span lang="de">Kontakt ↗</span><span lang="es">Contacto ↗</span><span lang="fr">Contact ↗</span><span lang="pt">Contato ↗</span></span></a>
       </div>
       <nav class="foot-social" aria-label="Social profiles">
         <a href="https://www.linkedin.com/in/mateusmendelson/" target="_blank" rel="noopener">LinkedIn</a>

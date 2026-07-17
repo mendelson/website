@@ -332,7 +332,9 @@ def render_new_page(template, slug, url, title, h1, desc, layout, maxw):
         main_html = (
             '<div class="page-head">'
             '<a class="breadcrumb" href="{base}/">'
-            '<span class="t"><span lang="en">← Home</span><span lang="pt">← Início</span></span>'
+            '<span class="t"><span lang="en">← Home</span><span lang="de">← Startseite</span>'
+            '<span lang="es">← Inicio</span><span lang="fr">← Accueil</span>'
+            '<span lang="pt">← Início</span></span>'
             '</a>'
             '<h1 class="page-title">{h1}</h1>'
             '</div>\n<div class="prose">\n{body}\n</div>'
