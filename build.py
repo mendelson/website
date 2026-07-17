@@ -47,7 +47,7 @@ YEAR = datetime.date.today().year
 # --------------------------------------------------------------------------
 PAGES = [
     # slug            url                                   title                                          h1                                desc                                                                             layout    maxw
-    ("home",          "/",                                  "Mateus Mendelson — Data Scientist",           "",                               "Mateus Mendelson — Data Scientist. Two production systems built and run solo, teaching materials, research and publications.", "custom", 1020),
+    ("home",          "/",                                  "Mateus Mendelson — Data Scientist",           "",                               "Mateus Mendelson — Data Scientist. Production systems, teaching materials, research and publications.", "custom", 1020),
     ("teaching",      "/teaching/",                         "Teaching Materials — Mateus Mendelson",       "Teaching Materials",             "Course notes, slide decks and notebooks authored by Mateus Mendelson, organized by discipline.",                              "custom", 840),
     ("publications",  "/publications/",                     "Research & Publications — Mateus Mendelson",  "Research & Publications",        "Conference proceedings, theses, workshops, seminars and posters by Mateus Mendelson.",                                        "custom", 840),
     ("fga",           "/teaching/fga/",                     "UnB Gama — Mateus Mendelson",                 "University of Brasília - Gama",  "Courses taught at the University of Brasília - Gama (UnB/FGA).",                                                               "prose",  840),
