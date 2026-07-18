@@ -151,9 +151,7 @@ route them through the helper, and add the universal set. Key conversion:
 
 ## Phase checklist (resumable — tick as it lands)
 
-> **Remaining (account-side, only the owner can do):** enable cross-domain
-> measurement across the three domains (Admin → the apps stream → Configure
-> tag settings → Configure your domains → add all three); then verify in GA4
+> **Remaining (account-side, only the owner can do):** verify in GA4
 > **DebugView** and the Rich Results / consent checks in Phase 6.
 
 One GA4 property ("Motionforge", account-level), three distinct web streams —
