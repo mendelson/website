@@ -363,3 +363,26 @@ details.disc[open] > summary .disc-chevron{transform:rotate(90deg)}
   .pubprev-row{grid-template-columns:52px 1fr}
   .pubprev-row .pp-title{grid-column:1 / -1}
 }
+
+/* --------------------------------------------------------------------------
+   Consent bar (GA4 Consent Mode). Slim, bottom-fixed, theme-aware, accent CTA.
+   -------------------------------------------------------------------------- */
+.foot-cookies{color:var(--muted);text-decoration:none}
+.foot-cookies:hover{color:var(--accent)}
+.consent-bar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px 20px;
+  padding:14px 20px;background:var(--bg2);border-top:1px solid var(--line);
+  box-shadow:0 -6px 20px rgba(0,0,0,.18);
+}
+.consent-bar[hidden]{display:none}
+.consent-text{margin:0;font-size:13.5px;color:var(--fg);max-width:60ch}
+.consent-actions{display:flex;gap:10px}
+.consent-btn{
+  min-height:40px;padding:0 18px;border-radius:6px;border:0;cursor:pointer;
+  font:inherit;font-size:14px;font-weight:600;
+  background:var(--accent);color:var(--accent-ink);
+}
+.consent-btn:hover{filter:brightness(1.08)}
+.consent-btn--ghost{background:none;border:1px solid var(--line);color:var(--fg);font-weight:500}
+.consent-btn--ghost:hover{border-color:var(--accent);filter:none}
