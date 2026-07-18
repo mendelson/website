@@ -87,7 +87,7 @@ html:lang(pt) .t > [lang="pt"]{display:inline}
 }
 .brandbar-inner{
   max-width:1020px;margin:0 auto;
-  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  display:flex;align-items:center;gap:12px;
   padding:12px 28px;
 }
 .brand-logo{
@@ -96,7 +96,7 @@ html:lang(pt) .t > [lang="pt"]{display:inline}
 }
 .brand-logo:hover{color:var(--accent)}
 .brand-word{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.04em}
-.brandbar-right{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.brandbar-right{display:flex;align-items:center;gap:4px;margin-left:auto}
 /* Below ~480px the logo + language + site switcher no longer fit on one row.
    flex-basis:100% on .brandbar-right forces it onto its own line — an
    explicit break point rather than relying on ambiguous nested-flex wrap
@@ -104,7 +104,6 @@ html:lang(pt) .t > [lang="pt"]{display:inline}
    wrap .brandbar-right as a unit when tested). */
 @media (max-width:480px){
   .brandbar-inner{flex-wrap:wrap;row-gap:6px}
-  .brandbar-right{flex-basis:100%;justify-content:flex-end}
 }
 .site-switch{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:13px}
 .site-switch a{
