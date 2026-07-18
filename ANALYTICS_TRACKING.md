@@ -151,16 +151,25 @@ route them through the helper, and add the universal set. Key conversion:
 
 ## Phase checklist (resumable — tick as it lands)
 
-> **Remaining (account-side, only the owner can do):** create/confirm the GA4
-> property's web streams for hub + run and enable cross-domain measurement across
-> the three domains (the code uses the shared ID `G-0MHS4QK452`); then verify in
-> GA4 **DebugView** and the Rich Results / consent checks in Phase 6.
+> **Remaining (account-side, only the owner can do):** enable cross-domain
+> measurement across the three domains (Admin → the apps stream → Configure
+> tag settings → Configure your domains → add all three); then verify in GA4
+> **DebugView** and the Rich Results / consent checks in Phase 6.
+
+One GA4 property ("Motionforge", account-level), three distinct web streams —
+each site now reports under its own Measurement ID (2026-07-18):
+
+| Site | Stream | Measurement ID |
+|---|---|---|
+| Hub (`mmendelson.com`) | mmendelson.com | `G-V6JSLPQV66` |
+| Apps (`apps.mmendelson.com`) | Motionforge Apps | `G-0MHS4QK452` |
+| Run (`run.mmendelson.com`) | run.mmendelson.com | `G-C9QHPB8WZR` |
 
 ### Phase 0 — this doc + decisions
 - [x] Commit this file.
-- [ ] Confirm Decisions 1–3 (tool, consent model, shared-helper approach).
-- [ ] Create/point the GA4 property + three data streams; note the run/hub
-      measurement IDs here once created.
+- [x] Confirm Decisions 1–3 (tool, consent model, shared-helper approach).
+- [x] Create/point the GA4 property + three data streams; run/hub measurement
+      IDs noted above.
 - [ ] `TaskCreate` entries mirroring Phases 1–5.
 
 ### Phase 1 — shared tracking helper + consent (all repos, one small module each)
