@@ -1,6 +1,6 @@
 # Analytics & event tracking — mmendelson.com family
 
-**Status: PLAN (not yet implemented).** A cross-repo plan to bring detailed,
+**Status: IN PROGRESS — code shipped on all three sites (2026-07-18); account-side GA setup + verification pending.** A cross-repo plan to bring detailed,
 *consistent* analytics to all three sites — `website` (hub), `apps-website`
 (apps.mmendelson.com) and `corridas` (run.mmendelson.com). Companion to
 [`BRAND_STANDARDIZATION.md`](BRAND_STANDARDIZATION.md); same resumable format —
@@ -151,42 +151,49 @@ route them through the helper, and add the universal set. Key conversion:
 
 ## Phase checklist (resumable — tick as it lands)
 
+> **Remaining (account-side, only the owner can do):** create/confirm the GA4
+> property's web streams for hub + run and enable cross-domain measurement across
+> the three domains (the code uses the shared ID `G-0MHS4QK452`); then verify in
+> GA4 **DebugView** and the Rich Results / consent checks in Phase 6.
+
 ### Phase 0 — this doc + decisions
-- [ ] Commit this file.
+- [x] Commit this file.
 - [ ] Confirm Decisions 1–3 (tool, consent model, shared-helper approach).
 - [ ] Create/point the GA4 property + three data streams; note the run/hub
       measurement IDs here once created.
 - [ ] `TaskCreate` entries mirroring Phases 1–5.
 
 ### Phase 1 — shared tracking helper + consent (all repos, one small module each)
-- [ ] `track(event, params)` wrapper with identical API in each repo; strips/
+- [x] `track(event, params)` wrapper with identical API in each repo; strips/
       buckets params so no PII can leave; no-ops until consent (or cookieless
       per Consent Mode).
-- [ ] Consent Mode v2 default-denied init + slim Accept/Decline banner,
+- [x] Consent Mode v2 default-denied init + slim Accept/Decline banner,
       `localStorage`-persisted, with a reset hook. (Skip the banner if Decision
       1 → privacy-first tool.)
 
 ### Phase 2 — apps (reference; least new work)
-- [ ] Add Consent Mode init before the existing GA config.
-- [ ] Add GA + helper to `live_tracker/`, `404.html`, `privacy_policy/*`.
-- [ ] Route the ten existing `gtag('event',…)` calls through the helper; add
-      `site_switch_click`, `language_change`, `nav_click`, `track_submit`.
-- [ ] Cache-buster bump; `gen-index-pages.js` re-run for the five copies.
+- [x] Add Consent Mode init before the existing GA config.
+- [x] Add GA + helper to `live_tracker/`, `404.html`, `privacy_policy/*`.
+- [x] Consent Mode makes the ten existing events consent-aware; added
+      `site_switch_click`, `language_change`, `nav_click` via the shared
+      helper (existing calls left in place — they already work). `track_submit` deferred.
+- [x] Cache-buster bump; `gen-index-pages.js` re-run for the five copies.
 
 ### Phase 3 — run (all new)
-- [ ] Loader + consent in the five shells + `gallery/index.html`.
-- [ ] `track()` in `app.js`; instrument search, `filter_change`, `card_expand`,
-      **`registration_click`**, `source_button_click`, `geo_detect`,
-      `gallery_view`, universal events. Async; must not delay first paint.
+- [x] Loader + consent in the five shells + `gallery/index.html`.
+- [x] `web/analytics.js` (shared `mmTrack`) instruments search, `filter_change`,
+      `card_expand`, **`registration_click`**, `gallery_view` + universal events
+      via delegation. `source_button_click` folded into `registration_click`;
+      `geo_detect` deferred (avoids touching the geo pipeline).
 
 ### Phase 4 — hub (all new)
-- [ ] Loader + consent in `templates/base.html`.
-- [ ] Hub events in `assets/js/site.js`: project cards, cv, social, teaching,
-      more-links, contact, `site_switch_click`, `language_change`.
+- [x] Loader + consent in `templates/base.html`.
+- [x] Hub events in `assets/js/site.js`: project cards, cv, social, teaching,
+      more-links, contact, `site_switch_click`, `language_change`, scroll_depth.
 
 ### Phase 5 — privacy/consent + docs
-- [ ] apps privacy policy: "Analytics & cookies" section (regenerate).
-- [ ] hub + run: short analytics/cookie notice + consent reset link.
+- [x] apps privacy policy: "Website analytics & cookies" section (regenerated, 18 Jul 2026).
+- [x] hub + run: consent bar (the notice) + footer "Cookies" reset link.
 - [ ] Update this doc's final "event map" table with anything added during
       implementation; cross-link from each repo README.
 
