@@ -84,7 +84,9 @@ REDIRECTS = {
     # Other old slugs.
     "/findme/": "https://taggo.one/mmendelson",
     "/contato/": "https://taggo.one/mmendelson",
-    "/garmin-pricing/": "https://kiezelpay.com/code/?s=6B55524C-B713-A5B0-5C41-2D9341952181&dsu=2277156&p=69899-65105-76769-67043-67044-67046-65066-63790-66655-76730-69886&platform=garmin",
+    # Centralized on apps-website so the KiezelPay URL lives in one repo;
+    # this hop just forwards to it (see apps-website/garmin-pricing/).
+    "/garmin-pricing/": "https://apps.mmendelson.com/garmin-pricing/",
     "/pair/": "https://api.mmendelson.com/pair",
     # The Garmin Tracker Data Field companion moved to apps.mmendelson.com/tracker.
     # These carry the ?trackId=… query to the destination (see
