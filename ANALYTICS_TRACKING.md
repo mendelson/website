@@ -92,6 +92,20 @@ strings, emails, or `trackId`/`user` values — see the privacy rules below).
 | `teaching_discipline_click` | `discipline` |
 | `more_link_click` | `section` (teaching/publications) |
 | `contact_click` | — |
+| `short_link_click` | `code` (the slug, e.g. `1`), `to_site` (apps/run/home or the host) |
+
+`short_link_click` fires on the **tracked short links** (`TRACKED_SHORT_LINKS`
+in `build.py`; `/1` → apps.mmendelson.com is the first). Those slugs exist to
+be printed, put in a QR code or dropped in a bio, so the question they have to
+answer is "how many people came in through *this* one" — which the destination
+site cannot answer, since it is a different domain and sees only a referral.
+The stub records a `page_view` for the slug (referrer, country, device and
+timestamp come with it) plus this event for the code, then redirects. It waits
+for `event_callback` before navigating, capped at 700 ms, with a 1200 ms hard
+ceiling if gtag never loads — measured at 102 ms in the normal case. Consent
+Mode defaults are the same as every other page, so a pre-consent hit is a
+cookieless ping. Mechanics and the measured numbers: the *Tracked short links*
+section of [`README.md`](README.md).
 
 ### Apps (`apps-website`) — mostly exists; standardize + fill gaps
 

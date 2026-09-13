@@ -22,8 +22,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Build site
-        run: python3 build.py
+      # Builds AND checks the output (see tools/check_build.py): a leftover
+      # {{PLACEHOLDER}}, a missing page/redirect/short link, or a tracked
+      # short link that lost its measurement fails here rather than shipping.
+      # Same command a developer runs locally, so the two cannot drift.
+      - name: Build site + check output
+        run: python3 tools/check_build.py
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./public
