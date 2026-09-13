@@ -1,0 +1,61 @@
+name: Card redirect gates
+
+# Path-filtered so it only fires when the card redirect is actually touched.
+# Note the filter is matched against the whole PR diff, not just the newest
+# commits, so a PR that touches any of these runs this on every push to it.
+
+on:
+  pull_request:
+    paths:
+      - "cards/**"
+      - "cards.py"
+      - "functions/**"
+      - "build.py"
+      - "tools/check_cards.py"
+      - "tools/scans.py"
+      - "tools/test_middleware.mjs"
+      - ".github/workflows/cards.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    name: Batch config + middleware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Both gates fail on zero checks internally; CI re-asserts the count
+      # here as well, because a suite that silently stops compiling anything
+      # exits 0 with no output and reads as a pass.
+      - name: Batch config gate
+        run: |
+          set -o pipefail
+          python3 tools/check_cards.py | tee /tmp/cards.log
+          grep -Eq '^PASSED — [1-9][0-9]* checks$' /tmp/cards.log \
+            || { echo "::error::check_cards.py did not report a positive check count"; exit 1; }
+
+      - name: Middleware gate
+        run: |
+          set -o pipefail
+          node tools/test_middleware.mjs | tee /tmp/middleware.log
+          grep -Eq '^PASSED — [1-9][0-9]* checks$' /tmp/middleware.log \
+            || { echo "::error::test_middleware.mjs did not report a positive check count"; exit 1; }
+
+      - name: The build regenerates the edge table with no diff
+        run: |
+          python3 build.py > /dev/null
+          if ! git diff --quiet -- functions/batches.generated.js; then
+            echo "::error::functions/batches.generated.js is stale — run 'python3 build.py' and commit"
+            git diff -- functions/batches.generated.js
+            exit 1
+          fi
+          echo "OK: generated edge table matches cards/batches.json"

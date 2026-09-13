@@ -12,6 +12,8 @@ import re
 import shutil
 import datetime
 
+import batches
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CONTENT = os.path.join(ROOT, "content")
 TEMPLATES = os.path.join(ROOT, "templates")
@@ -218,6 +220,14 @@ def render_page(template, slug, url, title, h1, desc, layout, maxw):
 
 
 def build():
+    # Printed-card batches first: a bad id (one that collides with a real page,
+    # or that would push the printed URL past the QR budget) must stop the
+    # build before anything is written, not be discovered on a printed card.
+    # The QR budget is always measured against the apex the cards carry, even
+    # when this build targets the github.io project URL.
+    table = batches.generate(PAGES, REDIRECTS, CUSTOM_DOMAIN or "mmendelson.com")
+    print("cards   {} batch(es) -> functions/batches.generated.js".format(len(table)))
+
     if os.path.isdir(OUT):
         shutil.rmtree(OUT)
     os.makedirs(OUT, exist_ok=True)

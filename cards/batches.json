@@ -1,0 +1,17 @@
+{
+  "_comment": "Source of truth for every printed card batch. Add a batch = add an object below and push; the deploy regenerates the edge table. Only `id` and `destination` ever reach the edge — the rest is for your own queries (tools/scans.py joins on id).",
+
+  "default_destination": "https://apps.mmendelson.com/",
+
+  "batches": [
+    {
+      "id": "1",
+      "printed": "2026-09-20",
+      "quantity": 250,
+      "headline": "EXAMPLE — replace before printing",
+      "location": "EXAMPLE — where this batch was handed out",
+      "destination": null,
+      "notes": "destination:null means the batch uses default_destination. Set an absolute https URL to override it for this batch only."
+    }
+  ]
+}

@@ -16,8 +16,19 @@ assets/
   images/         Pictures, icons, favicon
   files/          PDFs (CV, music sheets, …)
 build.py          The generator: content + template -> public/
+batches.py        Printed-card batches: validate + generate the edge table
+cards/
+  batches.json    One object per printed batch (the file you edit)
+  schema.sql      D1 scan-log schema
+  README.md       Setup, adding a batch, querying the scans
+functions/
+  _middleware.js  The card redirect (Cloudflare Pages Function)
+wrangler.toml     Cloudflare Pages config + the scan-log binding
 tools/
   fetch_assets.sh Downloads original media from the old WP site
+  check_cards.py    Gate: batch config + generated-file sync
+  test_middleware.mjs  The middleware against a stubbed Pages context
+  scans.py        Query the scan log (summary / daily / invalid / csv)
 public/           Generated output (git-ignored; rebuilt on every deploy)
 ```
 
@@ -86,6 +97,32 @@ folders.
   [lang="xx"]{display:inline}` rule, add `xx` to the `langs` array in the
   `<head>` detection script, and add a button to `.lang-switch` in
   `templates/base.html`.
+
+## Printed-card redirects
+
+Each batch of printed cards gets a short trackable URL (`mmendelson.com/1`).
+The QR scan 302s to the app site and leaves a row in a scan log, so batches can
+be compared — headline, layout, distribution point.
+
+Adding a batch is an edit to [`cards/batches.json`](cards/batches.json) and a
+push. Full walkthrough, including the one-time Cloudflare setup and the query
+commands: **[`cards/README.md`](cards/README.md)**.
+
+> **This part does not run on GitHub Pages, and cannot.** A real 302,
+> `Cache-Control: no-store` and a per-scan log all need code running per
+> request; Pages only serves files. The existing `REDIRECTS` below are
+> meta-refresh pages answering **200** with a `location.replace()` script for
+> exactly that reason. The cards need the domain served by Cloudflare Pages —
+> same `public/` directory, same `python3 build.py`. Until that cutover the new
+> files are inert: they live outside `public/`, so the GitHub Pages deploy
+> ignores them.
+
+Gates, both of which print their check count and fail on zero:
+
+```bash
+python3 tools/check_cards.py     # 28 checks
+node tools/test_middleware.mjs   # 38 checks
+```
 
 ## Media assets
 

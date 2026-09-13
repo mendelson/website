@@ -1,0 +1,22 @@
+# Cloudflare Pages configuration for mmendelson.com.
+#
+# The static site is unchanged: `python3 build.py` writes ./public, which is
+# what Pages serves. What this file adds is the scan log binding used by
+# functions/_middleware.js for the printed-card redirects.
+#
+# One-time setup (see cards/README.md for the full walkthrough):
+#   npx wrangler d1 create card-scans        # paste the id it prints below
+#   npx wrangler d1 execute card-scans --remote --file=./cards/schema.sql
+#   npx wrangler pages secret put IP_SALT    # any long random string
+#
+# Until database_id is filled in, the redirect still works — the middleware
+# treats an absent binding as "log nothing" rather than failing the hop.
+
+name = "mmendelson-hub"
+pages_build_output_dir = "public"
+compatibility_date = "2026-09-13"
+
+[[d1_databases]]
+binding = "SCANS_DB"
+database_name = "card-scans"
+database_id = "REPLACE_WITH_THE_ID_FROM_wrangler_d1_create"
