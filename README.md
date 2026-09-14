@@ -18,24 +18,37 @@ assets/
 build.py          The generator: content + template -> public/
 tools/
   fetch_assets.sh Downloads original media from the old WP site
+  check_build.py  Builds, then asserts the output is complete and substituted
+  analytics-family-check/
+                  Cross-repo browser check: is a hub -> apps -> run visit
+                  really ONE measured journey? (needs all three repos)
 public/           Generated output (git-ignored; rebuilt on every deploy)
 ```
 
 ## Build locally
 
 ```bash
-python3 build.py        # writes the full site into ./public
+python3 tools/check_build.py   # builds into ./public, then checks the output
+python3 build.py               # just build, no checks
 # preview:
 cd public && python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
 No third-party packages are required (standard library only).
 
+`check_build.py` is the gate the deploy workflow runs, so a local run and CI
+are the same command. It fails on a leftover `{{PLACEHOLDER}}`, a page /
+redirect / short link the registry claims and the output lacks, two registries
+claiming one URL, and a tracked short link that has lost its measurement —
+that last one is the failure nobody would notice, because the link keeps
+redirecting perfectly while reporting nothing. Each check prints a count and a
+count of zero fails.
+
 ## Editing content
 
 - **Text of a page** → edit the matching file in `content/`.
 - **Navigation, page list, redirects** → edit the tables near the top of
-  `build.py` (`PAGES`, `REDIRECTS`).
+  `build.py` (`PAGES`, `REDIRECTS`, `TRACKED_SHORT_LINKS`).
 - **Look & feel** → `assets/css/style.css`.
 
 Re-run `python3 build.py` after any change.
@@ -174,9 +187,92 @@ GitHub Pages, `/…` on the apex domain.)
 > `apps.mmendelson.com/tracker`. The `/tracker/` redirects above **preserve the
 > query string** (`?trackId=…`) so existing watch-generated links keep working.
 
+### Tracked short links
+
+Numbered slugs for print, QR codes, slides and bios. They redirect like
+everything above, but they are **measured first**: the source of truth is
+`TRACKED_SHORT_LINKS` in `build.py`.
+
+| URL | Destination | GA4 event |
+|---|---|---|
+| `/1` | `apps.mmendelson.com` | `short_link_click` `{code: "1", to_site: "apps"}` |
+
+`mmendelson.com/1` works without the trailing slash: GitHub Pages 301s it to
+`/1/`. That is not an assumption about Pages — `https://mmendelson.com/g` and
+`/t` answer `301 → /g/` and `301 → /t/` on the live site today, and `/1` answers
+`404` until this ships.
+
+**Why these are not just another row in `REDIRECTS`.** A plain redirect stub
+carries no analytics and bounces immediately, so "how many people scanned that
+QR code?" has no answer at all. A tracked stub loads GA4 (the family stream,
+same Consent Mode v2 defaults as every other page), records a `page_view` for
+the slug and a `short_link_click` event carrying the code, and only then
+navigates. Referrer, country, region, device, browser and timestamp all arrive
+with the `page_view`, so the code is the only thing that has to be sent
+explicitly.
+
+Because the three family sites share one measurement stream, the hop does not
+end the session: `/1` becomes the session's **landing page** and everything the
+visitor then does on apps.mmendelson.com is the same session, so the funnel is
+a Path exploration away. That is also why the stub does **not** append `utm_*`
+to the destination — doing so would start a fresh campaign session at the hop
+and cut the journey in two.
+
+**How it avoids costing the visitor anything.** Navigating too early loses the
+hit, so the stub waits for gtag's `event_callback` — ceiling 700 ms — with a
+hard 1200 ms cap for the case where gtag never loads at all (ad blocker,
+dropped request). Measured in Chromium against a stubbed gtag: **102 ms** when
+the tag loads, **1236 ms** when it is blocked, **3042 ms** with JavaScript
+disabled entirely (the `<meta refresh>` backstop); all three land on
+apps.mmendelson.com and request it exactly once. The visible link works with no
+JS at all.
+
+Navigation goes through a click on the real `<a>` rather than
+`location.replace()` directly, so GA4's link handling sees an ordinary click. A
+600 ms fallback re-reads the `href`, so the redirect still happens if the click
+did nothing. (Session continuity across the hop does not depend on this — it
+comes from the shared `_ga` cookie on `.mmendelson.com`, verified by
+`tools/analytics-family-check/run.sh`.)
+
+**Codes are permanent.** A printed code cannot be re-pointed once it is in the
+wild without lying about what it measures. Retire a code rather than reuse it,
+and add new ones by appending.
+
+No consent bar on these stubs, deliberately: the visitor is there for under a
+second and lands on a site that shows its own. Consent defaults to **denied**
+exactly as elsewhere, so an un-consented hit is a cookieless ping, and a
+visitor who already accepted anywhere in the family is honoured — the stub
+reads the same `.mmendelson.com` consent cookie every page reads.
+
 > Some short aliases reach an off-site destination through one in-site hop
 > (e.g. `/g/` → `/garmin-apps/` → `apps.mmendelson.com`); the tables show the
 > final destination.
+
+## Analytics
+
+All three family sites — this hub, `apps.mmendelson.com` and
+`run.mmendelson.com` — send to **one GA4 measurement stream**
+(`GA_MEASUREMENT_ID` in `build.py`), which is what makes a visit that walks
+between them a single session instead of three. They are subdomains of one
+domain, so the `_ga` cookies land on `.mmendelson.com` and every site reads the
+same ones; no cross-domain linker is involved.
+
+Consent is recorded in a cookie on `.mmendelson.com` too — **not**
+`localStorage`, which is per-origin and therefore made each site ask again and,
+worse, kept two of the three sending in cookieless mode after the visitor had
+already accepted on the first. Accepting also grants the Google Signals
+consents (the age/gender/interest estimates), so the banner names them and
+links to the family privacy policy; anyone who only answered the earlier
+banner is asked once more rather than being opted in silently.
+
+The cross-repo plan, the event taxonomy, what GA4 collects by itself versus
+what the pages send, where each answer lives in the GA4 UI, and the account-side
+steps that no code can do are all in
+[`ANALYTICS_TRACKING.md`](ANALYTICS_TRACKING.md).
+
+```bash
+bash tools/analytics-family-check/run.sh   # needs all three repos side by side
+```
 
 ## Notes / known gaps
 

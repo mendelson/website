@@ -78,14 +78,28 @@
   var FAMILY = /(^|\.)mmendelson\.com$/i;
 
   // Consent bar ------------------------------------------------------------
+  // mm_consent_v is the banner VERSION the visitor answered. Accepting now
+  // grants the ad signals too (Google Signals, which is what produces the
+  // age/gender/interest estimates), so someone who accepted the v1 banner —
+  // which only named analytics — is asked again rather than having the wider
+  // scope switched on behind them. The <head> block honours their v1 analytics
+  // choice in the meantime.
   var bar = document.getElementById('consent-bar');
   if (bar) {
-    var stored;
-    try { stored = localStorage.getItem('mm_consent'); } catch (e) {}
-    if (!stored) bar.hidden = false;
+    var answered = (window.mmConsentGet || function () { return null; })('mm_consent_v');
+    if (answered !== '2') bar.hidden = false;
     function setConsent(v) {
-      try { localStorage.setItem('mm_consent', v); } catch (e) {}
-      if (v === 'granted') { try { gtag('consent', 'update', { analytics_storage: 'granted' }); } catch (e) {} }
+      var put = window.mmConsentSet || function (k, x) { try { localStorage.setItem(k, x); } catch (e) {} };
+      put('mm_consent', v);
+      put('mm_consent_v', '2');
+      if (v === 'granted') {
+        try {
+          gtag('consent', 'update', {
+            analytics_storage: 'granted', ad_storage: 'granted',
+            ad_user_data: 'granted', ad_personalization: 'granted'
+          });
+        } catch (e) {}
+      }
       bar.hidden = true;
     }
     bar.querySelector('[data-consent="accept"]').addEventListener('click', function () { setConsent('granted'); });
