@@ -412,6 +412,15 @@ def build():
     shutil.copytree(ASSETS, os.path.join(OUT, "assets"))
     print("copied  assets/")
 
+    # /favicon.ico at the ROOT as well.  Every rendered page declares its icons
+    # explicitly, but the redirect stubs do not — and a client that only ever
+    # asks for /favicon.ico (a scraper, a link preview, an older browser) got a
+    # 404 here.  One file fixes all 40-odd stubs at once, the tracked short
+    # links included.
+    shutil.copyfile(os.path.join(ASSETS, "images", "favicon.ico"),
+                    os.path.join(OUT, "favicon.ico"))
+    print("copied  favicon.ico (root fallback)")
+
     # CNAME (only when a custom domain is configured; otherwise a CNAME file
     # would make GitHub Pages redirect the project URL to the custom domain).
     if CUSTOM_DOMAIN:
