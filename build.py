@@ -34,11 +34,17 @@ else:
     BASE = "/website"
     SITE_URL = "https://mendelson.github.io/website"
 
-# GA4 measurement id for the hub stream (see ANALYTICS_TRACKING.md for the
-# three streams).  Defined ONCE here: templates/base.html and the tracked
-# short-link stubs below both receive it through {{GA_ID}}, so the id can
-# never be right in one generated file and stale in another.
-GA_MEASUREMENT_ID = "G-V6JSLPQV66"
+# GA4 measurement id.  ONE id for the whole mmendelson.com family — this hub,
+# apps.mmendelson.com and run.mmendelson.com all send to it, which is what
+# makes a hub -> apps -> run visit a single session instead of three unrelated
+# ones (the _ga cookies land on .mmendelson.com and every site reads the same
+# pair).  Which site a hit came from is GA4's built-in Hostname dimension, so
+# nothing has to be sent to say so.  See ANALYTICS_TRACKING.md.
+#
+# Defined ONCE here: templates/base.html and the tracked short-link stubs below
+# both receive it through {{GA_ID}}, so the id can never be right in one
+# generated file and stale in another.
+GA_MEASUREMENT_ID = "G-0MHS4QK452"
 
 YEAR = datetime.date.today().year
 
@@ -249,8 +255,9 @@ def redirect_tracked_html(target, code, to_site):
     No consent bar: the visitor is on this page for under a second and is
     about to land on a site that shows its own.  Consent defaults to denied,
     exactly as elsewhere, so an un-consented hit is a cookieless ping — and a
-    visitor who already accepted on this domain is honoured via the same
-    `mm_consent` key the rest of the site uses.
+    visitor who already accepted anywhere in the family is honoured, because
+    the record is read from the `.mmendelson.com` cookie (falling back to this
+    origin's localStorage), the same way templates/base.html reads it.
     """
     target_attr = target.replace("&", "&amp;")
     label = target.split("//", 1)[-1].rstrip("/")
@@ -271,8 +278,18 @@ def redirect_tracked_html(target, code, to_site):
         "gtag('js',new Date());"
         "gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',"
         "ad_personalization:'denied',analytics_storage:'denied'});"
-        "try{if(localStorage.getItem('mm_consent')==='granted')"
-        "{gtag('consent','update',{analytics_storage:'granted'});}}catch(e){}"
+        "function mmG(k){var m=document.cookie.match('(^|; )'+k+'=([^;]*)');"
+        "if(m)return decodeURIComponent(m[2]);"
+        "try{return localStorage.getItem(k);}catch(e){return null;}}"
+        "try{var mmC=mmG('mm_consent'),mmV=mmG('mm_consent_v');"
+        "if(mmC==='granted'){var mmU={analytics_storage:'granted'};"
+        "if(mmV==='2'){mmU.ad_storage='granted';mmU.ad_user_data='granted';"
+        "mmU.ad_personalization='granted';}"
+        "gtag('consent','update',mmU);}}catch(e){}"
+        "gtag('set',{ui_lang:document.documentElement.lang||'',"
+        "ui_theme:(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)')"
+        ".matches)?'dark':'light',display_mode:(window.matchMedia&&"
+        "matchMedia('(display-mode: standalone)').matches)?'standalone':'browser'});"
         "gtag('config','{ga}',{transport_type:'beacon'});"
         '</script>'
         '<script async src="https://www.googletagmanager.com/gtag/js?id={ga}"></script>'

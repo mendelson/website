@@ -15,7 +15,11 @@ only place the failures below are visible:
   * a tracked short link whose stub lost its measurement (the GA id, the
     short_link_click event, or the code itself) and so reports nothing while
     still redirecting perfectly — the failure nobody notices, because the link
-    keeps working.
+    keeps working;
+  * consent wiring that has quietly regressed — the family cookie helpers, the
+    banner-version gate, the banner's own disclosure of the demographic
+    signals, and its link to the policy.  Each of those has been broken here
+    at least once, and none of them show up as a visible defect.
 
 Every check reports a COUNT and a zero count fails: a checker that silently
 checked nothing is the worst possible pass.
@@ -106,7 +110,39 @@ def main():
     check("no tracked short links registered", len(build.TRACKED_SHORT_LINKS) > 0)
     print("short links  : {} written".format(len(build.TRACKED_SHORT_LINKS)))
 
-    # 5. The registries must not fight over the same output path.
+    # 5. Consent has to survive a careless edit.  Each of these was a real
+    # defect at some point: consent kept per-origin so the other two family
+    # sites ignored it, a banner that grants the demographic signals without
+    # naming them, and a short-link stub that forgot to read the record at all.
+    consent_pages = 0
+    for _slug, url, *_ in build.PAGES:
+        html = read_out(url)
+        if not html:
+            continue
+        consent_pages += 1
+        for what, needle in (
+                ("the family consent cookie reader", "mmConsentGet"),
+                ("the consent writer", "mmConsentSet"),
+                ("the banner version gate", "mm_consent_v"),
+                ("the banner's demographic disclosure", "age, gender and interest"),
+                ("the banner's privacy-policy link", "/privacy_policy/")):
+            check("page {} lost {}".format(url, what), needle in html)
+        # Defining the helper is not using it: a head block that reads
+        # localStorage directly is the per-origin bug coming back.
+        check("page {} reads consent from localStorage instead of the family "
+              "cookie".format(url),
+              "localStorage.getItem('mm_consent')" not in html)
+    check("no page checked for consent wiring", consent_pages > 0)
+    print("consent      : {} pages checked".format(consent_pages))
+
+    for src in build.TRACKED_SHORT_LINKS:
+        html = read_out(src) or ""
+        check("short link {} does not read the family consent record".format(src),
+              "mmG('mm_consent')" in html)
+        check("short link {} ignores the banner version".format(src),
+              "mm_consent_v" in html)
+
+    # 6. The registries must not fight over the same output path.
     urls = [u for _, u, *_ in build.PAGES] + list(build.REDIRECTS) + list(build.TRACKED_SHORT_LINKS)
     dupes = sorted({u for u in urls if urls.count(u) > 1})
     check("two registries claim the same URL", not dupes, ", ".join(dupes))

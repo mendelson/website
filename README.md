@@ -17,7 +17,7 @@ rows say which mechanism is simply absent rather than missing.
 | :-- | :--: | :-- |
 | **1** — PRs open as drafts, marked ready only when done | ✅ | nothing here runs on `pull_request` (see rule 12), so a PR is verified by `tools/check_build.py` locally and says so in its body — rule 1's no-CI carve-out |
 | **2** — Critical thinking, no pointless questions, token economy | ✅ | behavioural — see `CLAUDE.md` |
-| **3** — Verify, then assert; never assert the environment from memory | ✅ | claims about the generated site are checked against `public/` by `tools/check_build.py`; the `/1/` redirect timings in *Tracked short links* are browser measurements, not estimates |
+| **3** — Verify, then assert; never assert the environment from memory | ✅ | claims about the generated site are checked against `public/` by `tools/check_build.py`; the `/1/` redirect timings in *Tracked short links* are browser measurements, not estimates; and the cross-site session claim is asserted by `tools/analytics-family-check/run.sh` against Google's real `gtag.js`, not taken from documentation |
 | **4** — Commit AND push, both, by default | ✅ | behavioural; nothing here is kept on a local branch |
 | **5** — Do not dispatch CI nobody asked for | ✅ | the only workflow that runs is `deploy.yml`, on push to `main` and `workflow_dispatch`; `preflight.yml` is pinned to a dead migration branch |
 | **6** — Do not store what an artifact already contains | ✅ | `GA_MEASUREMENT_ID` is defined once in `build.py` and reaches every page through `{{GA_ID}}`; `CUSTOM_DOMAIN` derives `BASE`, `SITE_URL` and the `CNAME` instead of three settings agreeing by hand |
@@ -26,7 +26,7 @@ rows say which mechanism is simply absent rather than missing.
 | **9** — A test-mode switch is committed at its SHIPPABLE value | n/a | no test-mode or payment switch exists here |
 | **10** — Every export produces `evidences/<version>/` | n/a | nothing is exported; the artifact is the deployed site |
 | **11** — Standardized actions + templates | 🟡 | `deploy.yml` is the stock Pages build+deploy pair, but `AI-Instructions/templates/` covers the Connect IQ repos only, and the three sites are on two different hosts (Pages here and on apps, Cloudflare Pages on run) — no shared static-site template exists to conform to yet |
-| **12** — Local first: a desktop run is the default, CI the fallback | ✅ | `python3 tools/check_build.py` is the gate and `deploy.yml` runs that same command, so local and CI cannot drift; it needs only the standard library |
+| **12** — Local first: a desktop run is the default, CI the fallback | ✅ | `python3 tools/check_build.py` is the gate and `deploy.yml` runs that same command, so local and CI cannot drift; it needs only the standard library. `tools/analytics-family-check/run.sh` is local-only by nature — CI checks out this repo alone and the check is about the other two |
 | **13** — Apps Script managed + deployed in-repo | n/a | no Apps Script project; the site is served statically with no backend |
 | **14** — Ships the ten-language set, English fallback | ❌ | five today (`de en es fr pt`, inline per page, English default) — **missing** `rus`, `dut`, `jpn`, `kor`, `zhs`, and it also trails `apps-website`, which ships seven (adds `it`, `ru`). Scheduled work, not this PR's: see `AI-Instructions/docs/LOCALIZATION.md` and the *Language support* section below for the four places a language is added |
 | **15** — Build emits no warnings (ratcheted) | ✅ | baseline 0: `python3 -W error::DeprecationWarning -W error::SyntaxWarning tools/check_build.py` passes on 3.10, 3.11, 3.12 (the version `deploy.yml` pins) and 3.13; there is no compiler in this repo |
@@ -59,6 +59,9 @@ build.py          The generator: content + template -> public/
 tools/
   fetch_assets.sh Downloads original media from the old WP site
   check_build.py  Builds, then asserts the output is complete and substituted
+  analytics-family-check/
+                  Cross-repo browser check: is a hub -> apps -> run visit
+                  really ONE measured journey? (needs all three repos)
 public/           Generated output (git-ignored; rebuilt on every deploy)
 ```
 
@@ -240,14 +243,20 @@ everything above, but they are **measured first**: the source of truth is
 `404` until this ships.
 
 **Why these are not just another row in `REDIRECTS`.** A plain redirect stub
-carries no analytics and bounces immediately, and the destination is a
-*different domain* whose GA stream cannot attribute a visit back to the slug it
-came through — so "how many people scanned that QR code?" has no answer. A
-tracked stub loads GA4 (hub stream, the same Consent Mode v2 defaults as every
-other page), records a `page_view` for the slug and a `short_link_click` event
-carrying the code, and only then navigates. Referrer, country, device and
-timestamp all arrive with the `page_view`, so the code is the only thing that
-has to be sent explicitly.
+carries no analytics and bounces immediately, so "how many people scanned that
+QR code?" has no answer at all. A tracked stub loads GA4 (the family stream,
+same Consent Mode v2 defaults as every other page), records a `page_view` for
+the slug and a `short_link_click` event carrying the code, and only then
+navigates. Referrer, country, region, device, browser and timestamp all arrive
+with the `page_view`, so the code is the only thing that has to be sent
+explicitly.
+
+Because the three family sites share one measurement stream, the hop does not
+end the session: `/1` becomes the session's **landing page** and everything the
+visitor then does on apps.mmendelson.com is the same session, so the funnel is
+a Path exploration away. That is also why the stub does **not** append `utm_*`
+to the destination — doing so would start a fresh campaign session at the hop
+and cut the journey in two.
 
 **How it avoids costing the visitor anything.** Navigating too early loses the
 hit, so the stub waits for gtag's `event_callback` — ceiling 700 ms — with a
@@ -259,10 +268,11 @@ apps.mmendelson.com and request it exactly once. The visible link works with no
 JS at all.
 
 Navigation goes through a click on the real `<a>` rather than
-`location.replace()` directly, because GA4's cross-domain linker decorates
-*link clicks* — that decoration is what keeps a hub → apps journey one session
-instead of two. A 600 ms fallback re-reads the (possibly decorated) `href`, so
-the redirect still happens if the click did nothing.
+`location.replace()` directly, so GA4's link handling sees an ordinary click. A
+600 ms fallback re-reads the `href`, so the redirect still happens if the click
+did nothing. (Session continuity across the hop does not depend on this — it
+comes from the shared `_ga` cookie on `.mmendelson.com`, verified by
+`tools/analytics-family-check/run.sh`.)
 
 **Codes are permanent.** A printed code cannot be re-pointed once it is in the
 wild without lying about what it measures. Retire a code rather than reuse it,
@@ -271,12 +281,38 @@ and add new ones by appending.
 No consent bar on these stubs, deliberately: the visitor is there for under a
 second and lands on a site that shows its own. Consent defaults to **denied**
 exactly as elsewhere, so an un-consented hit is a cookieless ping, and a
-visitor who already accepted on this domain is honoured through the same
-`mm_consent` key the rest of the site uses.
+visitor who already accepted anywhere in the family is honoured — the stub
+reads the same `.mmendelson.com` consent cookie every page reads.
 
 > Some short aliases reach an off-site destination through one in-site hop
 > (e.g. `/g/` → `/garmin-apps/` → `apps.mmendelson.com`); the tables show the
 > final destination.
+
+## Analytics
+
+All three family sites — this hub, `apps.mmendelson.com` and
+`run.mmendelson.com` — send to **one GA4 measurement stream**
+(`GA_MEASUREMENT_ID` in `build.py`), which is what makes a visit that walks
+between them a single session instead of three. They are subdomains of one
+domain, so the `_ga` cookies land on `.mmendelson.com` and every site reads the
+same ones; no cross-domain linker is involved.
+
+Consent is recorded in a cookie on `.mmendelson.com` too — **not**
+`localStorage`, which is per-origin and therefore made each site ask again and,
+worse, kept two of the three sending in cookieless mode after the visitor had
+already accepted on the first. Accepting also grants the Google Signals
+consents (the age/gender/interest estimates), so the banner names them and
+links to the family privacy policy; anyone who only answered the earlier
+banner is asked once more rather than being opted in silently.
+
+The cross-repo plan, the event taxonomy, what GA4 collects by itself versus
+what the pages send, where each answer lives in the GA4 UI, and the account-side
+steps that no code can do are all in
+[`ANALYTICS_TRACKING.md`](ANALYTICS_TRACKING.md).
+
+```bash
+bash tools/analytics-family-check/run.sh   # needs all three repos side by side
+```
 
 ## Notes / known gaps
 

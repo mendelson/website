@@ -53,10 +53,24 @@ on every deploy**. Never edit `public/`; edit the generator or the fragment.
   from `localStorage.mm_lang` → `navigator.language` → `en`. Adding a sixth
   language means touching every `.t` group, the CSS rule, the `langs` array
   and the globe menu — the README lists the four places.
-- **`GA_MEASUREMENT_ID` in `build.py` is the ONE definition of the hub's GA4
-  id** (rule 6). `templates/base.html` and the short-link stubs both receive it
+- **`GA_MEASUREMENT_ID` in `build.py` is the ONE definition of the GA4 id**
+  (rule 6). `templates/base.html` and the short-link stubs both receive it
   through `{{GA_ID}}`; the id is not written literally in any committed HTML.
-  The three streams (hub/apps/run) are mapped in `ANALYTICS_TRACKING.md`.
+  It is the **family** id — apps.mmendelson.com and run.mmendelson.com send to
+  the same one, which is what makes a visit across the three a single session.
+  Changing it here changes only this site; the other two carry their own copies
+  of the same head block, so all three move together or not at all.
+- **Consent is a cookie on `.mmendelson.com`, not `localStorage`.** The head
+  block defines `mmConsentGet`/`mmConsentSet` and `assets/js/site.js` uses
+  them. localStorage is per ORIGIN, so the hub, apps and run each had their own
+  copy: the visitor was asked three times, and after the stream was unified the
+  other two went on sending in *denied* mode while the hub's `_ga` cookie sat
+  right there. `mm_consent_v` is the banner version answered — only `2` may
+  grant the ad/demographic signals.
+- **`tools/analytics-family-check/run.sh` is the only thing that can check any
+  of that**, because it depends on what a browser does across three hostnames.
+  It serves all three repos on their real names over local HTTPS and runs
+  Google's real `gtag.js`. Needs the sibling repos checked out; not in CI.
 - **The 404 page is built twice over** — `build()` renders `content/404.html`
   if it exists and otherwise falls back to an inline copy that repeats the
   `.replace()` chain. There is no `content/404.html` today, so **the fallback

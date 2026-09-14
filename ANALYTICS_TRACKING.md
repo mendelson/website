@@ -1,6 +1,6 @@
 # Analytics & event tracking — mmendelson.com family
 
-**Status: IN PROGRESS — code shipped on all three sites (2026-07-18); account-side GA setup + verification pending.** A cross-repo plan to bring detailed,
+**Status: IN PROGRESS — code shipped on all three sites (2026-07-18); consolidated onto ONE measurement stream with demographics enabled (2026-09-14); account-side GA setup + verification pending.** A cross-repo plan to bring detailed,
 *consistent* analytics to all three sites — `website` (hub), `apps-website`
 (apps.mmendelson.com) and `corridas` (run.mmendelson.com). Companion to
 [`BRAND_STANDARDIZATION.md`](BRAND_STANDARDIZATION.md); same resumable format —
@@ -44,21 +44,46 @@ apps is already deeply wired to GA4 with a good custom-event pattern. Three opti
 | B — Plausible / Umami (privacy-first) | ✅ | ✅ (cookieless, no banner) | Plausible ~$9/mo, or Umami self-hosted (server + DB to run) | Cleaner privacy, but throws away apps' working GA and adds cost or ops |
 | C — Cloudflare Web Analytics | ❌ limited custom events | ✅ | Free (run already on CF) | Fails the "detailed" requirement — pageviews, not rich events |
 
-**Recommendation A.** One **GA4 property**, three **web data streams** (hub /
-apps / run), **cross-domain measurement** enabled across the three domains so a
-hub → run/apps journey is one session. `G-0MHS4QK452` becomes the apps stream;
-add hub + run streams under the same property. Nothing below depends on the
-exact tool except the loader + consent mechanics (Phase 1) — the **event
-taxonomy is tool-agnostic**, so switching to B later is a Phase-1-only rework.
+**Recommendation A.** One **GA4 property** for all three sites. Nothing below
+depends on the exact tool except the loader + consent mechanics (Phase 1) — the
+**event taxonomy is tool-agnostic**, so switching to B later is a Phase-1-only
+rework.
+
+> **Superseded on 2026-09-14 — read the stream table below before this
+> paragraph.** This originally said *three* data streams plus cross-domain
+> measurement. Both halves were wrong for this family: three streams mean three
+> session cookies and therefore three sessions per journey, and cross-domain
+> measurement is for genuinely different domains — these three are subdomains of
+> one, where the cookies are shared automatically. The three sites now share a
+> single measurement ID.
 
 ### Decision 2 — consent model. **Recommended: GA4 Consent Mode v2 + a slim banner.**
 
 Load gtag with `analytics_storage: 'denied'` by default → GA sends **cookieless
 pings** (aggregate, no identifiers) until the visitor accepts. A small,
-dismissible banner (Accept / Decline) flips consent; the choice persists in
-`localStorage`. Decline keeps cookieless pings only. This is GDPR-defensible
-*and* still yields usable numbers pre-consent. (If Decision 1 → B, no banner is
-needed and this decision is moot.)
+dismissible banner (Accept / Decline) flips consent. Decline keeps cookieless
+pings only. This is GDPR-defensible *and* still yields usable numbers
+pre-consent. (If Decision 1 → B, no banner is needed and this decision is moot.)
+
+**Banner v2 (2026-09-14) — two changes, both forced by decisions above.**
+
+1. **Accepting now also grants `ad_storage`, `ad_user_data` and
+   `ad_personalization`**, because that is what Google Signals needs and
+   Signals is what produces the age / gender / interest estimates. The banner
+   text on all three sites names those estimates, and links to the family
+   privacy policy — consent for something the visitor was not told about is
+   not consent. `mm_consent_v` records **which banner version** was answered:
+   a visitor who accepted v1 consented to analytics only, so they keep
+   analytics and are **asked again**, rather than having the wider scope
+   switched on behind them.
+2. **The record is a cookie on `.mmendelson.com`, not `localStorage`.**
+   localStorage is per **origin**, and the hub, apps and run are three origins
+   — so a visitor who accepted on the hub was asked again on apps, and, once
+   the three shared one measurement, apps went on sending in *denied* mode
+   while the `_ga` cookie the hub had already written sat right there. The
+   family check caught exactly this. localStorage stays as the fallback for
+   hosts where the family domain cannot be set (a local preview, the
+   `github.io` project URL) and for visitors who answered before the change.
 
 ### Decision 3 — one shared event schema, one tiny helper per repo.
 
@@ -97,10 +122,15 @@ strings, emails, or `trackId`/`user` values — see the privacy rules below).
 `short_link_click` fires on the **tracked short links** (`TRACKED_SHORT_LINKS`
 in `build.py`; `/1` → apps.mmendelson.com is the first). Those slugs exist to
 be printed, put in a QR code or dropped in a bio, so the question they have to
-answer is "how many people came in through *this* one" — which the destination
-site cannot answer, since it is a different domain and sees only a referral.
-The stub records a `page_view` for the slug (referrer, country, device and
-timestamp come with it) plus this event for the code, then redirects. It waits
+answer is "how many people came in through *this* one". The stub records a
+`page_view` for the slug (referrer, country, device and timestamp come with it)
+plus this event for the code, then redirects.
+
+Since the family shares one stream, the hop no longer ends the session: `/1`
+becomes the session's **landing page** and everything the visitor then does on
+apps is the same session. That is what makes the funnel answerable without
+tagging the destination with `utm_*` — and tagging it would actively hurt, by
+starting a fresh campaign session at the hop and cutting the journey in two. It waits
 for `event_callback` before navigating, capped at 700 ms, with a 1200 ms hard
 ceiling if gtag never loads — measured at 102 ms in the normal case. Consent
 Mode defaults are the same as every other page, so a pre-consent hit is a
@@ -130,6 +160,90 @@ route them through the helper, and add the universal set. Key conversion:
 | `geo_detect` | `method`, `country` | IP-geo pipeline outcome (country only) |
 | `gallery_view` | — | on `/gallery` |
 
+## What GA4 collects by itself, and what we send
+
+The rule is rule 6: **do not send what the artifact already contains.** Every
+custom dimension costs one of a capped 50 and, worse, creates a second source
+of truth that can disagree with the first. So the site sends almost nothing
+about the visitor — GA4 already derives it from the request:
+
+| Already automatic — do NOT send it | Where it comes from |
+|---|---|
+| Country, **region/state**, city | IP geolocation |
+| Language | browser `Accept-Language` |
+| Browser + version, OS + version | user agent |
+| Device category, brand, model, screen resolution | user agent / client hints |
+| **Which of the three sites** | the `Hostname` dimension |
+| Referrer, source / medium / campaign, landing page | the request + `utm_*` |
+| First visit vs returning, engagement time, page path | the tag |
+
+Three things it genuinely cannot know, so the head block sends them with every
+event via `gtag('set', …)`:
+
+| Param | Why GA4 cannot derive it |
+|---|---|
+| `ui_lang` | GA4 records the **browser's** language. All three sites let the visitor override it (the hub's globe writes `mm_lang`; apps and run fork by URL), so the language actually **rendered** is a different fact |
+| `ui_theme` | `prefers-color-scheme` never reaches the server |
+| `display_mode` | whether run's PWA was opened **installed** or as a tab |
+
+**Age and gender are neither.** They come from **Google Signals**, which is an
+account-side switch, not code: Google supplies its own estimates for visitors
+signed in to a Google account with Ads Personalization on. Three caveats worth
+writing down before reading a demographics report:
+
+- they are **Google's inferences**, never anything a visitor told this site;
+- they exist only for the signed-in subset **who accepted** the v2 banner;
+- GA4 applies **data thresholding** — rows are withheld entirely when the
+  numbers are small enough to risk identifying someone. On a personal site's
+  traffic, expect the demographics report to be sparse or empty for a while.
+  That is the mechanism protecting visitors, not a broken setup.
+
+## Where each answer lives in GA4
+
+| Question | Where |
+|---|---|
+| Country / region / city | Reports → User → **User attributes → Demographic details**, or any report with the Country/Region/City dimension |
+| Browser, OS, device, screen | Reports → Tech → **Tech details** |
+| Language (browser) | Reports → User attributes → Demographic details → *Language* |
+| Language **rendered** | any report, once `ui_lang` is registered as a custom dimension |
+| **Age / gender / interests** | Reports → User → User attributes → **Demographic details** (needs Google Signals ON, and survives thresholding only with enough traffic) |
+| How many came through `/1` | Reports → Engagement → **Pages and screens**, page path `/1/`; or the `short_link_click` event |
+| Which entry a session came from | Reports → Acquisition → **Traffic acquisition** (source/medium), and the session's **Landing page** — `/1/` for the short link, a Google result for organic, `(direct)` for a typed URL or a QR scan |
+| **The journey across the three sites** | Explore → **Path exploration**, node type *Page path* — one session now spans the hub, apps and run, so the path is continuous; add `Hostname` as a breakdown to see the site changes |
+| Which buttons a visit clicked | Explore → Path exploration with node type **Event name**, or Reports → Engagement → **Events** filtered by session |
+| A single visitor's sequence | Explore → **User explorer** (needs consent; a cookieless visitor has no id to follow) |
+
+**Sessions only exist for visitors who accepted.** Consent Mode denied means
+cookieless pings: they are counted, and they are aggregate — no client id, so
+no journey, no user explorer, no returning-visitor status. Everything in the
+journey rows above is about the accepted subset.
+
+## Account-side steps (only the owner can do these)
+
+Code cannot do any of these, and the data they unlock does not backfill:
+
+1. **Google Signals ON** — Admin → Data collection and modification → Data
+   collection. This is what turns on age/gender/interests. The banner and the
+   privacy policy already disclose it (Decision 2).
+2. **Register the custom dimensions** — Admin → Custom definitions → Create
+   custom dimension, event-scoped, one each for `ui_lang`, `ui_theme`,
+   `display_mode`, `code` (the short-link slug) and `to_site`. Until a
+   parameter is registered it is visible **only** in DebugView and Realtime,
+   never in standard reports, and registering it does **not** backfill —
+   dimensions only apply from the day they are created.
+3. **Data retention → 14 months** — Admin → Data retention. The default is 2
+   months for user-level data, which quietly makes any journey older than that
+   unexplorable.
+4. **Unwanted referrals** — Admin → Data streams → the stream → Configure tag
+   settings → List unwanted referrals → add `mmendelson.com`. Stops the family
+   from being recorded as its own traffic source.
+5. **Rename the stream** — it is still called "Motionforge Apps" but now
+   receives all three sites; something like "mmendelson.com (family)" stops the
+   next reader from mis-attributing it.
+6. **Leave the other two streams alone.** `G-V6JSLPQV66` and `G-C9QHPB8WZR`
+   keep what they collected before 2026-09-14. Deleting them deletes that
+   history.
+
 ## Per-site implementation notes
 
 - **Hub** (`build.py` / `templates/base.html`): add the loader + consent to the
@@ -155,27 +269,59 @@ route them through the helper, and add the universal set. Key conversion:
    policy via `scripts/gen-privacy-policy.js`; add the notice to the hub base
    template and the run shells.
 2. **Consent gate** (Decision 2): Consent Mode v2 default-denied + slim banner
-   on all three; persist choice in `localStorage`; provide a "reset consent"
-   link in each privacy notice.
+   on all three; the choice persists in a cookie on `.mmendelson.com` so it is
+   answered **once for the family** (localStorage is the fallback); a "reset
+   consent" link in each footer.
 3. **No PII, ever.** Never send search text, emails, `trackId`, LiveTrack
    `user`, or full outbound URLs with query strings. Parameters are bucketed
    (`query_length`, `host`, `country`, `percent`) — enforce this in the helper.
-4. IP anonymization is on by default in GA4; keep Google Signals **off** unless
-   separately justified and disclosed.
+   Google Signals does not change this: it adds Google's own aggregate
+   estimates, and nothing a visitor enters here is ever sent.
+4. IP anonymization is on by default in GA4. **Google Signals is ON as of
+   2026-09-14**, which is the "separately justified and disclosed" case this
+   line always allowed for: justified by wanting audience demographics,
+   disclosed in the v2 banner on all three sites and in the family privacy
+   policy, and gated behind an explicit Accept that also re-asks anyone who
+   only ever answered the v1 banner.
 
 ## Phase checklist (resumable — tick as it lands)
 
-> **Remaining (account-side, only the owner can do):** verify in GA4
-> **DebugView** and the Rich Results / consent checks in Phase 6.
+> **Remaining (account-side, only the owner can do):** the six steps under
+> *Account-side steps* above — Signals, the custom dimensions, 14-month
+> retention, unwanted referrals, the stream rename — plus the DebugView and
+> consent checks in Phase 6.
 
-One GA4 property ("Motionforge", account-level), three distinct web streams —
-each site now reports under its own Measurement ID (2026-07-18):
+**ONE stream for the whole family (2026-09-14).** All three sites send to
+`G-0MHS4QK452`:
 
-| Site | Stream | Measurement ID |
-|---|---|---|
-| Hub (`mmendelson.com`) | mmendelson.com | `G-V6JSLPQV66` |
-| Apps (`apps.mmendelson.com`) | Motionforge Apps | `G-0MHS4QK452` |
-| Run (`run.mmendelson.com`) | run.mmendelson.com | `G-C9QHPB8WZR` |
+| Site | Measurement ID |
+|---|---|
+| Hub (`mmendelson.com`) | `G-0MHS4QK452` |
+| Apps (`apps.mmendelson.com`) | `G-0MHS4QK452` |
+| Run (`run.mmendelson.com`) | `G-0MHS4QK452` |
+
+**Why the three streams were collapsed into one.** They were always in the same
+property, but a property is not a session. GA4 keys the session on a
+`_ga_<measurement-id>` cookie, so each site minted its own: a visitor going hub
+→ apps → run produced **three sessions**, each attributed to a referral from
+the site before it, and no standard report could put the journey back together.
+The three sites are subdomains of one domain, so the fix costs nothing —
+gtag's default `cookie_domain: 'auto'` puts `_ga` and `_ga_0MHS4QK452` on
+`.mmendelson.com`, which all three read. One client id, one session, one
+journey, and no cross-domain linker to configure (that is for *different*
+domains; these are not).
+
+`G-0MHS4QK452` was kept rather than minting a new id because it is the oldest
+stream and carries the conversion history (`ciq_click`). The other two streams
+still hold what they collected before this date — nothing was deleted, it is
+simply not added to. **Which site a hit came from is the built-in `Hostname`
+dimension**, so nothing has to be sent to say so, and it works retroactively
+over the old data too (rule 6).
+
+Proof rather than assertion: `tools/analytics-family-check/run.sh` in this repo
+serves the three sites on their real hostnames, runs Google's actual `gtag.js`,
+and asserts the cookies land on `.mmendelson.com` and that apps and run see the
+same client id — 23 checks, no hit ever leaving the machine.
 
 ### Phase 0 — this doc + decisions
 - [x] Commit this file.
@@ -225,6 +371,25 @@ each site now reports under its own Measurement ID (2026-07-18):
       accept sets cookies. Banner persists the choice.
 - [ ] PII audit: inspect outgoing hits — no query text, emails, ids, or full
       URLs. `registration_click` / `ciq_click` conversions register.
+
+### Phase 7 — one family stream + demographics (2026-09-14)
+- [x] All three sites configure `G-0MHS4QK452`; the hub's id has one definition
+      (`GA_MEASUREMENT_ID` in `build.py`) and reaches every generated page
+      through `{{GA_ID}}`.
+- [x] Consent moved off per-origin `localStorage` onto a `.mmendelson.com`
+      cookie, so it is answered once for the family and apps/run stop ignoring
+      a choice made on the hub.
+- [x] Banner v2 on all three sites (7 languages on apps, 5 on hub and run):
+      names the demographic estimates, links to the privacy policy, grants the
+      ad signals on Accept, and re-asks anyone who only answered v1.
+- [x] `ui_lang`, `ui_theme`, `display_mode` sent via `gtag('set', …)`.
+- [x] Family privacy policy rewritten (7 languages) — covers all three sites,
+      discloses Signals, the thresholding and what declining leaves.
+- [x] `tools/analytics-family-check/run.sh` — 23 browser checks against the
+      real `gtag.js` on the real hostnames, no hit leaving the machine.
+- [ ] The six account-side steps above.
+- [ ] Confirm in DebugView that one journey = one session, and that the
+      demographics report populates (or is thresholded — check which).
 
 ## How to resume if a session drops mid-phase
 1. Read this file top to bottom.
