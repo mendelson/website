@@ -9,8 +9,12 @@
 // Every collection endpoint is blocked, so no hit ever reaches the live
 // property; the cookies are written client-side regardless.
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = process.env.MM_PORT || '8443';
+// What the local server logs every would-be hit to (run.sh clears it first).
+const COLLECTED = path.join(__dirname, 'collected.log');
 const HUB = 'https://mmendelson.com';
 const APPS = 'https://apps.mmendelson.com';
 const RUN = 'https://run.mmendelson.com';
@@ -106,16 +110,6 @@ async function main() {
       granted && granted.ad_user_data === 'granted' &&
       granted.ad_personalization === 'granted' && granted.ad_storage === 'granted',
       JSON.stringify(granted));
-    const setParams = await page.evaluate(() => {
-      for (const row of window.dataLayer || []) if (row[0] === 'set') return row[1];
-      return null;
-    });
-    add('ui_lang / ui_theme / display_mode are sent',
-      setParams && setParams.ui_lang === 'en' &&
-      ['dark', 'light'].includes(setParams.ui_theme) &&
-      ['standalone', 'browser'].includes(setParams.display_mode),
-      JSON.stringify(setParams));
-
     // Hub -> apps, as a visitor would.
     await page.goto(APPS + '/en/', { waitUntil: 'networkidle' });
     const onApps = await ctx.cookies();
@@ -126,7 +120,9 @@ async function main() {
     add('apps needs no second consent prompt',
       !(await page.isVisible('#consent-bar')));
     const appsId = await page.evaluate(() =>
-      (document.documentElement.outerHTML.match(/gtag\('config', '(G-[A-Z0-9]+)'\)/) || [])[1]);
+      // No closing paren in the pattern: the config call now carries a second
+      // argument (the ui_* params), and requiring ')' silently matched nothing.
+      (document.documentElement.outerHTML.match(/gtag\('config', '(G-[A-Z0-9]+)'/) || [])[1]);
     add('apps is configured on the family stream', appsId === FAMILY_ID, String(appsId));
 
     // apps -> run.
@@ -136,7 +132,9 @@ async function main() {
     add('run.mmendelson.com sees the SAME client id',
       !!onRun.find(c => c.name === '_ga' && c.value === clientId));
     const runId = await page.evaluate(() =>
-      (document.documentElement.outerHTML.match(/gtag\('config', '(G-[A-Z0-9]+)'\)/) || [])[1]);
+      // No closing paren in the pattern: the config call now carries a second
+      // argument (the ui_* params), and requiring ')' silently matched nothing.
+      (document.documentElement.outerHTML.match(/gtag\('config', '(G-[A-Z0-9]+)'/) || [])[1]);
     add('run is configured on the family stream', runId === FAMILY_ID, String(runId));
 
     const sessions = onRun.filter(c => c.name.startsWith('_ga_')).map(c => c.name);
@@ -197,6 +195,21 @@ async function main() {
   }
 
   await browser.close();
+
+  // Asserted against the real collect PAYLOAD, not against the dataLayer
+  // call. An earlier version of this check only proved gtag had been asked
+  // for the params; the payload showed they never left the page, because
+  // custom keys given to gtag('set', …) are dropped and only config params
+  // ride along. A check that watches the request is the only honest one.
+  const payload = fs.existsSync(COLLECTED) ? fs.readFileSync(COLLECTED, 'utf8') : '';
+  add('ui_lang reaches the collect payload', /[?&]ep\.ui_lang=en(&|$)/m.test(payload));
+  add('ui_theme reaches the collect payload', /[?&]ep\.ui_theme=(dark|light)(&|$)/m.test(payload));
+  add('display_mode reaches the collect payload',
+    /[?&]ep\.display_mode=(standalone|browser)(&|$)/m.test(payload));
+  add('no junk transport_type parameter is sent',
+    !/[?&]ep\.transport_type=/.test(payload), 'transport_type is a Universal Analytics field');
+  add('every hit goes to the family stream',
+    payload.includes('tid=' + FAMILY_ID) && !/tid=G-(?!0MHS4QK452)/.test(payload));
 
   console.log('\n--- checks ---');
   let bad = 0;

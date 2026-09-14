@@ -36,8 +36,12 @@ empty log with a non-zero counter just means they died before the stub.
 - Accepting grants the demographic (Google Signals) consent; a visitor who
   accepted the **v1** banner is asked again and keeps analytics-only until
   they answer — the ad signals are never switched on behind them.
-- `ui_lang`, `ui_theme` and `display_mode` are sent (the three things GA4 does
-  not collect by itself).
+- `ui_lang`, `ui_theme` and `display_mode` **reach the `/g/collect` payload**,
+  and no junk `transport_type` parameter does. Asserted against the intercepted
+  request, not against the `gtag` call: an earlier version checked the dataLayer
+  and passed while the params were being dropped on the floor, because custom
+  keys given to `gtag('set', …)` never leave the page.
+- Every hit carries the family `tid`, and no other measurement id appears.
 - Consent given on one site is honoured on the other two without a second
   prompt. **This is the check that earned the tool**: consent used to live in
   `localStorage`, which is per-origin, so apps and run silently ignored a

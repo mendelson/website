@@ -124,18 +124,20 @@ in `build.py`; `/1` → apps.mmendelson.com is the first). Those slugs exist to
 be printed, put in a QR code or dropped in a bio, so the question they have to
 answer is "how many people came in through *this* one". The stub records a
 `page_view` for the slug (referrer, country, device and timestamp come with it)
-plus this event for the code, then redirects.
+plus this event for the code, then redirects. The stub waits for
+`event_callback` before navigating, capped at 700 ms, with a 1200 ms hard
+ceiling if gtag never loads — measured at 102 ms in the normal case. Consent
+Mode defaults are the same as every other page, so a pre-consent hit is a
+cookieless ping.
 
 Since the family shares one stream, the hop no longer ends the session: `/1`
 becomes the session's **landing page** and everything the visitor then does on
 apps is the same session. That is what makes the funnel answerable without
 tagging the destination with `utm_*` — and tagging it would actively hurt, by
-starting a fresh campaign session at the hop and cutting the journey in two. It waits
-for `event_callback` before navigating, capped at 700 ms, with a 1200 ms hard
-ceiling if gtag never loads — measured at 102 ms in the normal case. Consent
-Mode defaults are the same as every other page, so a pre-consent hit is a
-cookieless ping. Mechanics and the measured numbers: the *Tracked short links*
-section of [`README.md`](README.md).
+starting a fresh campaign session at the hop and cutting the journey in two.
+
+Mechanics and the measured numbers: the *Tracked short links* section of
+[`README.md`](README.md).
 
 ### Apps (`apps-website`) — mostly exists; standardize + fill gaps
 
@@ -162,7 +164,7 @@ route them through the helper, and add the universal set. Key conversion:
 
 ## What GA4 collects by itself, and what we send
 
-The rule is rule 6: **do not send what the artifact already contains.** Every
+The principle: **do not send what the artifact already contains.** Every
 custom dimension costs one of a capped 50 and, worse, creates a second source
 of truth that can disagree with the first. So the site sends almost nothing
 about the visitor — GA4 already derives it from the request:
@@ -178,13 +180,25 @@ about the visitor — GA4 already derives it from the request:
 | First visit vs returning, engagement time, page path | the tag |
 
 Three things it genuinely cannot know, so the head block sends them with every
-event via `gtag('set', …)`:
+event as **parameters on the `gtag('config', …)` call**:
 
 | Param | Why GA4 cannot derive it |
 |---|---|
 | `ui_lang` | GA4 records the **browser's** language. All three sites let the visitor override it (the hub's globe writes `mm_lang`; apps and run fork by URL), so the language actually **rendered** is a different fact |
 | `ui_theme` | `prefers-color-scheme` never reaches the server |
 | `display_mode` | whether run's PWA was opened **installed** or as a tab |
+
+**They must be config parameters, not `gtag('set', …)`.** This was measured, not
+assumed: with the three passed to `set()`, the real `/g/collect` payload carried
+no `ep.ui_lang` at all — custom keys given to `set()` are dropped, while config
+params ride along on every event to that destination. The same payload caught a
+second mistake in the opposite direction: the short-link stub passed
+`transport_type: 'beacon'`, a **Universal Analytics** field GA4 does not
+consume, and gtag forwarded it verbatim as `ep.transport_type` on every hit —
+a junk custom parameter on the one page that most needed a clean one. Both are
+now asserted against the payload itself in
+`tools/analytics-family-check/`, because a check that only proves gtag *was
+asked* for a parameter proves nothing about whether it left the page.
 
 **Age and gender are neither.** They come from **Google Signals**, which is an
 account-side switch, not code: Google supplies its own estimates for visitors
@@ -316,7 +330,7 @@ stream and carries the conversion history (`ciq_click`). The other two streams
 still hold what they collected before this date — nothing was deleted, it is
 simply not added to. **Which site a hit came from is the built-in `Hostname`
 dimension**, so nothing has to be sent to say so, and it works retroactively
-over the old data too (rule 6).
+over the old data too.
 
 Proof rather than assertion: `tools/analytics-family-check/run.sh` in this repo
 serves the three sites on their real hostnames, runs Google's actual `gtag.js`,
@@ -382,11 +396,14 @@ same client id — 23 checks, no hit ever leaving the machine.
 - [x] Banner v2 on all three sites (7 languages on apps, 5 on hub and run):
       names the demographic estimates, links to the privacy policy, grants the
       ad signals on Accept, and re-asks anyone who only answered v1.
-- [x] `ui_lang`, `ui_theme`, `display_mode` sent via `gtag('set', …)`.
+- [x] `ui_lang`, `ui_theme`, `display_mode` sent as `gtag('config', …)`
+      parameters — verified in the collect payload, not in the dataLayer call.
 - [x] Family privacy policy rewritten (7 languages) — covers all three sites,
       discloses Signals, the thresholding and what declining leaves.
-- [x] `tools/analytics-family-check/run.sh` — 23 browser checks against the
-      real `gtag.js` on the real hostnames, no hit leaving the machine.
+- [x] `tools/analytics-family-check/run.sh` — 27 browser checks against the
+      real `gtag.js` on the real hostnames, no hit leaving the machine. Five of
+      them read the intercepted `/g/collect` payload, which is what caught the
+      `set()`-vs-config and `transport_type` mistakes above.
 - [ ] The six account-side steps above.
 - [ ] Confirm in DebugView that one journey = one session, and that the
       demographics report populates (or is thresholded — check which).

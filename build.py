@@ -241,6 +241,12 @@ def redirect_tracked_html(target, code, to_site):
     blocker, or a dropped request.  Neither path can strand the visitor: the
     <meta refresh> and the visible link both work with no JS at all.
 
+    It does NOT pass transport_type: that is a Universal Analytics field, and
+    GA4 does not consume it — measured against the real collect payload, gtag
+    forwarded it verbatim as `ep.transport_type` on every hit from this page,
+    which is a junk custom parameter, not a transport choice.  GA4 already
+    uses sendBeacon for hits that race an unload.
+
     Navigation goes through a click on the real anchor rather than straight to
     location.replace(), because GA4's cross-domain linker decorates *link
     clicks* — that decoration is what keeps a hub→apps journey one session
@@ -286,11 +292,10 @@ def redirect_tracked_html(target, code, to_site):
         "if(mmV==='2'){mmU.ad_storage='granted';mmU.ad_user_data='granted';"
         "mmU.ad_personalization='granted';}"
         "gtag('consent','update',mmU);}}catch(e){}"
-        "gtag('set',{ui_lang:document.documentElement.lang||'',"
+        "gtag('config','{ga}',{ui_lang:document.documentElement.lang||'',"
         "ui_theme:(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)')"
         ".matches)?'dark':'light',display_mode:(window.matchMedia&&"
         "matchMedia('(display-mode: standalone)').matches)?'standalone':'browser'});"
-        "gtag('config','{ga}',{transport_type:'beacon'});"
         '</script>'
         '<script async src="https://www.googletagmanager.com/gtag/js?id={ga}"></script>'
         '</head><body>'
