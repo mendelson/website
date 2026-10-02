@@ -1,0 +1,154 @@
+name: Deploy to Apps Script
+
+# Keeps the short-link counter (apps-script/ — the Web App every tracked
+# short-link stub POSTs one anonymous row to) in sync with main. On every push
+# to main that touches apps-script/, and monthly (rule 27), this pushes the
+# code with clasp and redeploys the EXISTING deployment in place, so the /exec
+# URL the stubs call never moves.
+#
+# Requires ONE repository secret, delivered by secrets-manager (rule 28) —
+# never pasted here by hand:
+#   CLASP_CREDENTIALS  - full contents of ~/.clasprc.json from `clasp login`
+#
+# DEPLOYMENT_ID is not stored anywhere: it is derived from
+# SHORT_LINK_COUNTER_URL in build.py, the URL the stubs actually call.
+# SCRIPT_ID IS pinned below, because the counter is CONTAINER-BOUND to its
+# spreadsheet and bound scripts are not Drive files — `clasp list-scripts`
+# cannot find them, so there is nothing to derive it from. The pin is not
+# trusted: the resolve step checks it owns that deployment before anything is
+# pushed, and refuses otherwise.
+#
+# Without CLASP_CREDENTIALS the job SKIPS with a warning and reports success —
+# a green run is only a deploy if its log ends in "Deployed <id> @N" and the
+# health check after it.
+
+on:
+  # Rule 27: monthly too, so a backend nobody has touched still proves main is
+  # what is deployed. 13:00 UTC, NOT 12:00: an in-place redeploy leaves Apps
+  # Script serving a Drive 404 for a short window, and dedupe-appsscript.yml
+  # ticks at 00/04/08/12/16/20 (a tick hit that window 37 s after a redeploy,
+  # 2026-08-02). Schedules fire from the default branch only: merging arms it.
+  schedule:
+    - cron: '0 13 1 * *'
+  push:
+    branches: [main]
+    paths:
+      - 'apps-script/**'
+      - '.github/workflows/deploy-appsscript.yml'
+  workflow_dispatch: {}
+
+# Never let two deploys race; the newest push wins.
+concurrency:
+  group: deploy-appsscript
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # CLASP_CREDENTIALS is the ONLY thing that has to be configured. Both ids
+      # are resolved at run time by the shared helper — see the resolve step.
+      - name: Check Apps Script credential
+        id: secrets
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: |
+          if [ -z "$CLASP_CREDENTIALS" ]; then
+            echo "::warning::CLASP_CREDENTIALS not set — skipping deploy. See AI-Instructions rule 13."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: '22'
+
+      - name: Install clasp
+        if: steps.secrets.outputs.ready == 'true'
+        run: npm i -g @google/clasp@3.3.0
+
+      - name: Write clasp auth
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
+        run: printf '%s' "$CLASP_CREDENTIALS" > "$HOME/.clasprc.json"
+
+      # Nothing about the target is stored. DEPLOYMENT_ID comes from the /exec
+      # URL compiled into the app, so the deployment updated is by construction
+      # the one shipped apps call; SCRIPT_ID is then the project that owns that
+      # deployment, found via clasp. vars.SCRIPT_ID, if set, is treated as a pin
+      # and still VERIFIED against the deployment rather than trusted.
+      #
+      # Both are echoed in the clear — that visibility is the point, and is what
+      # storing them as masked secrets took away.
+      #
+      # NO FILE ARGUMENT, on purpose. The helper then searches source/ for the one
+      # /exec URL the app calls. This line used to name
+      # source/RouteSilhouetteBackground.mc -- Route Silhouette's file -- and every
+      # repo installed from the template inherited it: Dynamic Hours carried it,
+      # with the helper not even vendored, and the step could never have worked.
+      # Nobody saw it for weeks, because a run without CLASP_CREDENTIALS SKIPS
+      # and reports success. If a repo's URL is outside source/, pass that file.
+      - name: Resolve Apps Script target
+        id: ids
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          # The bound project — see the header. Verified, not trusted.
+          SCRIPT_ID: PENDING_SCRIPT_ID
+        # build.py, not source/: this repo has no source/, and build.py is the
+        # one file that names the counter (check_build.py asserts exactly one
+        # /exec URL in it, which is what resolve requires).
+        run: bash .ci/apps-script.sh resolve build.py
+
+      - name: Write project config
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          SCRIPT_ID: ${{ steps.ids.outputs.script_id }}
+        run: printf '{"scriptId":"%s","rootDir":"apps-script"}' "$SCRIPT_ID" > .clasp.json
+
+      - name: Push code to Apps Script
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          # AN EMPTY apps-script/ WOULD BLANK THE LIVE BACKEND. `clasp push --force`
+          # makes the project match rootDir, and every installed watch calls this
+          # deployment's /exec with no way to be moved to another. The folder is
+          # legitimately empty before a repo adopts its backend, and this job runs
+          # on the monthly schedule regardless -- so the guard lives HERE, not in a
+          # reviewer's head (docs/APPS-SCRIPT.md, "Guard the deploy").
+          shopt -s nullglob
+          src=(apps-script/*.gs apps-script/*.js)
+          if [ ! -f apps-script/appsscript.json ] || [ ${#src[@]} -eq 0 ]; then
+            echo "::error::apps-script/ lacks appsscript.json or any .gs/.js source."
+            echo "::error::Refusing to push: it would overwrite the live Web App."
+            exit 1
+          fi
+          clasp push --force
+
+      - name: Redeploy the Web App
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          DEPLOYMENT_ID: ${{ steps.ids.outputs.deployment_id }}
+        run: clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "main @ ${GITHUB_SHA::7}"
+
+      # A deploy that answered is not a deploy that works. doGet is read-only by
+      # contract (apps-script/Code.js: health, no reads, no writes), so a GET is
+      # safe here in a way it is not on the telemetry endpoints. Three tries 30 s
+      # apart: an in-place redeploy serves a Drive 404 for a short window.
+      - name: Health check
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          DEPLOYMENT_ID: ${{ steps.ids.outputs.deployment_id }}
+        run: |
+          url="https://script.google.com/macros/s/${DEPLOYMENT_ID}/exec"
+          for i in 1 2 3; do
+            body="$(curl -sSL "$url" || true)"
+            echo "attempt $i: $body"
+            case "$body" in *'"service":"short-link-counter"'*) exit 0 ;; esac
+            sleep 30
+          done
+          echo "::error::$url did not answer as the short-link counter"
+          exit 1

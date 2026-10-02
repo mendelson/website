@@ -16,9 +16,14 @@ assets/
   images/         Pictures, icons, favicon
   files/          PDFs (CV, music sheets, …)
 build.py          The generator: content + template -> public/
+apps-script/      The short-link counter (Apps Script Web App, bound to its
+                  own spreadsheet) — deployed by deploy-appsscript.yml
+.ci/              apps-script.sh (clasp helper, from AI-Instructions) and
+                  claude_md_test.sh (rule 19 gate)
 tools/
   fetch_assets.sh Downloads original media from the old WP site
   check_build.py  Builds, then asserts the output is complete and substituted
+  test_counter.js Unit tests for apps-script/Code.js against a mocked sheet
   analytics-family-check/
                   Cross-repo browser check: is a hub -> apps -> run visit
                   really ONE measured journey? (needs all three repos)
@@ -29,6 +34,8 @@ public/           Generated output (git-ignored; rebuilt on every deploy)
 
 ```bash
 python3 tools/check_build.py   # builds into ./public, then checks the output
+node tools/test_counter.js     # the short-link counter's server code
+bash .ci/claude_md_test.sh     # CLAUDE.md still references AI-Instructions
 python3 build.py               # just build, no checks
 # preview:
 cd public && python3 -m http.server 8000   # then open http://localhost:8000
@@ -41,8 +48,9 @@ are the same command. It fails on a leftover `{{PLACEHOLDER}}`, a page /
 redirect / short link the registry claims and the output lacks, two registries
 claiming one URL, and a tracked short link that has lost its measurement —
 that last one is the failure nobody would notice, because the link keeps
-redirecting perfectly while reporting nothing. Each check prints a count and a
-count of zero fails.
+redirecting perfectly while reporting nothing. It also fails while
+`SHORT_LINK_COUNTER_URL` or the deploy's `SCRIPT_ID` pin is still a
+placeholder. Each check prints a count and a count of zero fails.
 
 ## Editing content
 
@@ -193,9 +201,15 @@ Numbered slugs for print, QR codes, slides and bios. They redirect like
 everything above, but they are **measured first**: the source of truth is
 `TRACKED_SHORT_LINKS` in `build.py`.
 
-| URL | Destination | GA4 event |
-|---|---|---|
-| `/1` | `apps.mmendelson.com` | `short_link_click` `{code: "1", to_site: "apps"}` |
+| URL | Destination | GA4 event | Counter row |
+|---|---|---|---|
+| `/1` | `apps.mmendelson.com` | `short_link_click` `{code: "1", to_site: "apps"}` | `1`, `apps` |
+
+**Where to read "how many people used it": the counter's spreadsheet, not
+GA4.** The sheet is *Short links - mmendelson.com* in the owner's Drive; tab
+**Resumo** totals the hits per code, per day and per browser language, tab
+**Acessos** has one row per hit. GA4 only sees the visitors who had already
+accepted analytics cookies somewhere in the family — see *The counter* below.
 
 `mmendelson.com/1` works without the trailing slash: GitHub Pages 301s it to
 `/1/`. That is not an assumption about Pages — `https://mmendelson.com/g` and
@@ -204,10 +218,10 @@ everything above, but they are **measured first**: the source of truth is
 
 **Why these are not just another row in `REDIRECTS`.** A plain redirect stub
 carries no analytics and bounces immediately, so "how many people scanned that
-QR code?" has no answer at all. A tracked stub loads GA4 (the family stream,
-same Consent Mode v2 defaults as every other page), records a `page_view` for
-the slug and a `short_link_click` event carrying the code, and only then
-navigates. Referrer, country, region, device, browser and timestamp all arrive
+QR code?" has no answer at all. A tracked stub POSTs one row to the counter,
+loads GA4 (the family stream, same Consent Mode v2 defaults as every other
+page), records a `page_view` for the slug and a `short_link_click` event
+carrying the code, and only then navigates. Referrer, country, region, device, browser and timestamp all arrive
 with the `page_view`, so the code is the only thing that has to be sent
 explicitly.
 
@@ -244,6 +258,37 @@ exactly as elsewhere, so an un-consented hit is a cookieless ping, and a
 visitor who already accepted anywhere in the family is honoured — the stub
 reads the same `.mmendelson.com` consent cookie every page reads.
 
+#### The counter — why GA4 alone could not count the card
+
+An earlier version of this section said the stub answers "how many people
+scanned that QR code?". **For GA4 it does not, and that was wrong.** A
+cookieless ping is not shown in GA4's reports: unless a property qualifies for
+behavioral modeling (at least 1,000 events a day with `analytics_storage`
+denied for 7 days, plus 1,000 consenting daily users), *"your reports only
+include data available from users who consented"* (Google Analytics Help,
+answer 11161109). Measured on the live `/1/` on 2026-10-02 with the real
+`gtag.js`: a first-time visitor's `page_view` and `short_link_click` both
+leave as `gcs=G100` (denied), and only a visitor carrying an earlier
+`mm_consent=granted` sends `G111`. Someone handed a printed card has, almost
+always, never accepted anything on these sites — so GA4 saw almost none of
+them.
+
+So the stub also POSTs `code`, `to` and `lang` (`navigator.language`) to an
+Apps Script Web App (`apps-script/`, URL in `SHORT_LINK_COUNTER_URL`), which
+appends one row: time, code, destination, language. Nothing in it identifies a
+person — no cookie is set or read, the request goes out with
+`credentials:'omit'` (so not even a Google login cookie rides along), and Apps
+Script never sees the caller's IP — which is why it needs no consent, and why
+the family privacy policy can say so. `keepalive:true` lets the POST outlive
+the navigation; `mode:'no-cors'` because Apps Script sends no CORS headers and
+nothing reads the reply. It fires before anything else and does not delay the
+redirect (measured: 262 ms to land with GA loaded, 1227 ms with GA blocked —
+the same as before). Automated browsers (`navigator.webdriver`) are skipped.
+The server refuses any code that is not 1–4 digits.
+
+The two numbers answer different questions and both stay: the **sheet**
+counts every scan; **GA4** follows what the consenting part of them did next.
+
 > Some short aliases reach an off-site destination through one in-site hop
 > (e.g. `/g/` → `/garmin-apps/` → `apps.mmendelson.com`); the tables show the
 > final destination.
@@ -273,6 +318,48 @@ steps that no code can do are all in
 ```bash
 bash tools/analytics-family-check/run.sh   # needs all three repos side by side
 ```
+
+## AI-Instructions compliance
+
+Status against the account-wide rules in
+[AI-Instructions](https://github.com/mendelson/AI-Instructions). `✅` satisfied ·
+`🟡` wired, blocked on setup · `❌` not done · `n/a` with the reason.
+This is a static website, not a Connect IQ app: the rules about devices,
+tiers, `.iq` exports and Store listings have nothing here to apply to, and say
+so rather than being left out.
+
+| Rule | Status | How it's satisfied |
+| :-- | :--: | :-- |
+| **1** — PRs open as drafts, marked ready only when done | ✅ | behavioural; CI does not run on `pull_request` here, so a PR is verified by the local gates and the body says which ran |
+| **2** — Critical thinking, no pointless questions, token economy | ✅ | behavioural |
+| **3** — Verify, then assert | ✅ | the counter section above corrects a claim this README made about GA4 cookieless pings, with the measurement that disproved it |
+| **4** — Commit AND push, both, by default | ✅ | behavioural |
+| **5** — Do not dispatch CI nobody asked for | ✅ | `deploy.yml` fires on push to `main` only; `deploy-appsscript.yml` on `apps-script/**` changes and monthly |
+| **6** — Do not store what an artifact already contains | ✅ | GA id defined once in `build.py`; counter `DEPLOYMENT_ID` derived from `SHORT_LINK_COUNTER_URL`; `SCRIPT_ID` is pinned in the workflow **because** a bound script cannot be listed, and the pin is verified against the deployment before every push |
+| **7** — A green run that ran nothing is the worst possible green | ✅ | `check_build.py` prints a count per check and fails on zero; `tools/test_counter.js` exits non-zero unless it ran > 0 tests |
+| **8** — Tests at version 0 | n/a | no versioned app |
+| **9** — Test-mode switch committed at its shippable value | ✅ | the counter's only test path is the `test=1` request parameter; committed code has no mode to flip |
+| **10** — Every export produces `evidences/<version>/` | n/a | no `.iq` export |
+| **11** — Standardized actions + templates | 🟡 | `deploy-appsscript.yml` and `.ci/apps-script.sh` / `.ci/claude_md_test.sh` come from `AI-Instructions/templates/`; **pending:** there is no shared template for a static-site Pages deploy, so `deploy.yml` is this repo's own |
+| **12** — Local first | ✅ | every CI gate is a local command (Build locally, above); nothing is CI-only |
+| **13** — Apps Script managed + deployed in-repo | ✅ | `apps-script/` + `deploy-appsscript.yml` (clasp, in-place redeploy, empty-folder guard, health check) |
+| **14** — Ten languages, English fallback | ❌ | five (`de en es fr pt`) — **pending:** `ru nl ja ko zh` for the rule's ten, and `it`, which both sister sites carry (see `AI-Instructions/docs/LOCALIZATION.md`) |
+| **15** — Build emits no warnings (ratcheted) | ✅ | `build.py` prints no warnings; nothing to ratchet |
+| **16** — Any device testable from `manifest.xml` | n/a | no devices |
+| **17** — Owned devices always tested | n/a | no devices |
+| **18** — Real device id is testing-only | n/a | no device ids |
+| **19** — `CLAUDE.md` references AI-Instructions; no copied rules | ✅ | reference header; `.ci/claude_md_test.sh` runs in `deploy.yml` |
+| **20** — Every message ends with a `tl;dr` | ✅ | behavioural |
+| **21** — Store listing mirrored in `Connect IQ details/` | n/a | no Store listing |
+| **22** — README carries this compliance checklist | ✅ | this table |
+| **23** — Tiers own their code | n/a | no tiers |
+| **24** — Tiering hierarchy documented | n/a | no tiers |
+| **25** — Harness never leaves the tree built-able-wrong | ✅ | the only generated output is `public/`, git-ignored and rebuilt from scratch on every build |
+| **26** — Held to every rule; nothing regressed | ✅ | a row per rule, `n/a` ones argued rather than omitted |
+| **27** — Apps Script deploy also runs monthly | ✅ | `deploy-appsscript.yml` `cron: '0 13 1 * *'` (13:00 UTC on the 1st; this repo has no other cron to collide with) |
+| **28** — Secrets come from `secrets-manager` | 🟡 | consumes `CLASP_CREDENTIALS` only (`deploy-appsscript.yml`) — **pending:** this repo's row in `secrets-manager/secrets.yml` (`apps-script` group); until then the deploy skips with a warning |
+| **29** — Shared desktop: device lock | n/a | no simulator |
+| **30** — Store listing in all 28 languages | n/a | no Store listing |
 
 ## Notes / known gaps
 

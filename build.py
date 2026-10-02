@@ -163,6 +163,20 @@ TRACKED_SHORT_LINKS = {
     "/1/": ("https://apps.mmendelson.com/", "apps"),
 }
 
+# The short-link counter: an Apps Script Web App (apps-script/ in this repo)
+# that every tracked stub POSTs one anonymous row to — time, code, destination,
+# browser language; no cookie, no identifier.  It exists because GA4 alone
+# cannot answer "how many scanned the card": the stub shows no consent banner,
+# so a first-time visitor's hit is a Consent-Mode-denied ping, and GA4 leaves
+# those out of its reports unless the property is big enough for behavioral
+# modeling (>= 1,000 denied events a day).  Measured on the live /1/ before
+# this existed: page_view and short_link_click both went out as gcs=G100.
+#
+# This URL is the ONE place the deployment is named: deploy-appsscript.yml
+# derives DEPLOYMENT_ID from it (.ci/apps-script.sh resolve build.py), so the
+# deployment it updates is by construction the one the stubs call.
+SHORT_LINK_COUNTER_URL = "https://script.google.com/macros/s/PENDING/exec"
+
 
 def read(path):
     with open(path, encoding="utf-8") as f:
@@ -258,6 +272,15 @@ def redirect_tracked_html(target, code, to_site):
     in flight and the destination is requested twice; the first request is
     simply abandoned.)
 
+    The COUNT does not depend on GA at all.  Before anything else the stub
+    POSTs {code, to, lang} to SHORT_LINK_COUNTER_URL with credentials:'omit'
+    (no cookie of any domain travels, Google's included) and keepalive:true
+    (the request survives the navigation that follows).  mode:'no-cors'
+    because Apps Script sends no CORS headers — the reply is opaque and
+    nothing needs it.  Skipped under navigator.webdriver, so automated
+    browsers (this repo's own tools/analytics-family-check among them) do not
+    inflate a number that is read as people.
+
     No consent bar: the visitor is on this page for under a second and is
     about to land on a site that shows its own.  Consent defaults to denied,
     exactly as elsewhere, so an un-consented hit is a cookieless ping — and a
@@ -301,6 +324,11 @@ def redirect_tracked_html(target, code, to_site):
         '</head><body>'
         '<p>Redirecting to <a id="mm-go" href="{ta}">{label}</a>…</p>'
         '<script>(function(){'
+        'if(!navigator.webdriver&&window.fetch){try{var b=new URLSearchParams();'
+        "b.set('code','{code}');b.set('to','{to}');"
+        "b.set('lang',navigator.language||'');"
+        "fetch('{counter}',{method:'POST',mode:'no-cors',credentials:'omit',"
+        'keepalive:true,body:b});}catch(e){}}'
         "var a=document.getElementById('mm-go'),done=false;"
         'function go(){if(done)return;done=true;'
         'try{a.click();}catch(e){}'
@@ -316,6 +344,7 @@ def redirect_tracked_html(target, code, to_site):
     return (page
             .replace("{ta}", target_attr)
             .replace("{ga}", GA_MEASUREMENT_ID)
+            .replace("{counter}", SHORT_LINK_COUNTER_URL)
             .replace("{label}", label)
             .replace("{code}", code)
             .replace("{to}", to_site))
