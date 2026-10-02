@@ -62,8 +62,13 @@ rework.
 Load gtag with `analytics_storage: 'denied'` by default → GA sends **cookieless
 pings** (aggregate, no identifiers) until the visitor accepts. A small,
 dismissible banner (Accept / Decline) flips consent. Decline keeps cookieless
-pings only. This is GDPR-defensible *and* still yields usable numbers
-pre-consent. (If Decision 1 → B, no banner is needed and this decision is moot.)
+pings only. This is GDPR-defensible, but the "still yields usable numbers
+pre-consent" this paragraph originally promised does **not** hold at this
+traffic: GA4 keeps cookieless pings out of its reports below the
+behavioral-modeling threshold (see *Where each answer lives*), so the
+pre-consent numbers are simply absent. Where a count of everyone matters — the
+printed short links — it comes from the Apps Script counter instead. (If
+Decision 1 → B, no banner is needed and this decision is moot.)
 
 **Banner v2 (2026-09-14) — two changes, both forced by decisions above.**
 
@@ -128,7 +133,12 @@ plus this event for the code, then redirects. The stub waits for
 `event_callback` before navigating, capped at 700 ms, with a 1200 ms hard
 ceiling if gtag never loads — measured at 102 ms in the normal case. Consent
 Mode defaults are the same as every other page, so a pre-consent hit is a
-cookieless ping.
+cookieless ping — **and GA4 does not report those** (see below), so this event
+counts only visitors who had already accepted. The full count is the
+**short-link counter**: the stub also POSTs one anonymous row (time, code,
+destination, browser language; no cookie, no identifier) to an Apps Script
+Web App, and the totals are in its spreadsheet, tab *Resumo*. Mechanics: the
+*Tracked short links* section of [`README.md`](README.md).
 
 Since the family shares one stream, the hop no longer ends the session: `/1`
 becomes the session's **landing page** and everything the visitor then does on
@@ -221,16 +231,22 @@ writing down before reading a demographics report:
 | Language (browser) | Reports → User attributes → Demographic details → *Language* |
 | Language **rendered** | any report, once `ui_lang` is registered as a custom dimension |
 | **Age / gender / interests** | Reports → User → User attributes → **Demographic details** (needs Google Signals ON, and survives thresholding only with enough traffic) |
-| How many came through `/1` | Reports → Engagement → **Pages and screens**, page path `/1/`; or the `short_link_click` event |
+| How many came through `/1` | **Not GA4** — the counter spreadsheet *Short links - mmendelson.com*, tab **Resumo**. GA4 (Engagement → Pages and screens, page path `/1/`, title "Redirecting…"; or the `short_link_click` event) shows only the visitors who had accepted analytics before scanning |
 | Which entry a session came from | Reports → Acquisition → **Traffic acquisition** (source/medium), and the session's **Landing page** — `/1/` for the short link, a Google result for organic, `(direct)` for a typed URL or a QR scan |
 | **The journey across the three sites** | Explore → **Path exploration**, node type *Page path* — one session now spans the hub, apps and run, so the path is continuous; add `Hostname` as a breakdown to see the site changes |
 | Which buttons a visit clicked | Explore → Path exploration with node type **Event name**, or Reports → Engagement → **Events** filtered by session |
 | A single visitor's sequence | Explore → **User explorer** (needs consent; a cookieless visitor has no id to follow) |
 
-**Sessions only exist for visitors who accepted.** Consent Mode denied means
-cookieless pings: they are counted, and they are aggregate — no client id, so
-no journey, no user explorer, no returning-visitor status. Everything in the
-journey rows above is about the accepted subset.
+**Only visitors who accepted are in the reports at all.** Consent Mode denied
+means cookieless pings, and an earlier version of this file said "they are
+counted, and they are aggregate". **They are not counted in reports**: GA4 uses
+them only as input to behavioral modeling, which needs at least 1,000 events a
+day with `analytics_storage` denied for 7 days and 1,000 consenting daily
+users; below that, *"your reports only include data available from users who
+consented"* (Google Analytics Help, answer 11161109). Every row in the table
+above is about the accepted subset — which is why the short links are counted
+by the Apps Script counter instead. Admin → Data display → Reporting identity
+shows whether the property ever becomes eligible.
 
 ## Account-side steps (only the owner can do these)
 

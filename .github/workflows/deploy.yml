@@ -28,6 +28,9 @@ jobs:
       # Same command a developer runs locally, so the two cannot drift.
       - name: Build site + check output
         run: python3 tools/check_build.py
+      # The short-link counter's server code, against a mocked sheet.
+      - name: Short-link counter unit tests
+        run: node tools/test_counter.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./public

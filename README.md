@@ -16,9 +16,14 @@ assets/
   images/         Pictures, icons, favicon
   files/          PDFs (CV, music sheets, …)
 build.py          The generator: content + template -> public/
+apps-script/      The short-link counter (Apps Script Web App, bound to its
+                  own spreadsheet) — deployed by deploy-appsscript.yml
+.ci/              apps-script.sh — clasp helper (login, pull, resolve the
+                  deployment the stubs call)
 tools/
   fetch_assets.sh Downloads original media from the old WP site
   check_build.py  Builds, then asserts the output is complete and substituted
+  test_counter.js Unit tests for apps-script/Code.js against a mocked sheet
   analytics-family-check/
                   Cross-repo browser check: is a hub -> apps -> run visit
                   really ONE measured journey? (needs all three repos)
@@ -29,6 +34,7 @@ public/           Generated output (git-ignored; rebuilt on every deploy)
 
 ```bash
 python3 tools/check_build.py   # builds into ./public, then checks the output
+node tools/test_counter.js     # the short-link counter's server code
 python3 build.py               # just build, no checks
 # preview:
 cd public && python3 -m http.server 8000   # then open http://localhost:8000
@@ -41,8 +47,9 @@ are the same command. It fails on a leftover `{{PLACEHOLDER}}`, a page /
 redirect / short link the registry claims and the output lacks, two registries
 claiming one URL, and a tracked short link that has lost its measurement —
 that last one is the failure nobody would notice, because the link keeps
-redirecting perfectly while reporting nothing. Each check prints a count and a
-count of zero fails.
+redirecting perfectly while reporting nothing. It also fails while
+`SHORT_LINK_COUNTER_URL` or the deploy's `SCRIPT_ID` pin is still a
+placeholder. Each check prints a count and a count of zero fails.
 
 ## Editing content
 
@@ -193,9 +200,15 @@ Numbered slugs for print, QR codes, slides and bios. They redirect like
 everything above, but they are **measured first**: the source of truth is
 `TRACKED_SHORT_LINKS` in `build.py`.
 
-| URL | Destination | GA4 event |
-|---|---|---|
-| `/1` | `apps.mmendelson.com` | `short_link_click` `{code: "1", to_site: "apps"}` |
+| URL | Destination | GA4 event | Counter row |
+|---|---|---|---|
+| `/1` | `apps.mmendelson.com` | `short_link_click` `{code: "1", to_site: "apps"}` | `1`, `apps` |
+
+**Where to read "how many people used it": the counter's spreadsheet, not
+GA4.** The sheet is *Short links - mmendelson.com* in the owner's Drive (folder *Garmin spreadsheets*); tab
+**Resumo** totals the hits per code, per browser language and per day, tab
+**Acessos** has one row per hit. GA4 only sees the visitors who had already
+accepted analytics cookies somewhere in the family — see *The counter* below.
 
 `mmendelson.com/1` works without the trailing slash: GitHub Pages 301s it to
 `/1/`. That is not an assumption about Pages — `https://mmendelson.com/g` and
@@ -204,10 +217,10 @@ everything above, but they are **measured first**: the source of truth is
 
 **Why these are not just another row in `REDIRECTS`.** A plain redirect stub
 carries no analytics and bounces immediately, so "how many people scanned that
-QR code?" has no answer at all. A tracked stub loads GA4 (the family stream,
-same Consent Mode v2 defaults as every other page), records a `page_view` for
-the slug and a `short_link_click` event carrying the code, and only then
-navigates. Referrer, country, region, device, browser and timestamp all arrive
+QR code?" has no answer at all. A tracked stub POSTs one row to the counter,
+loads GA4 (the family stream, same Consent Mode v2 defaults as every other
+page), records a `page_view` for the slug and a `short_link_click` event
+carrying the code, and only then navigates. Referrer, country, region, device, browser and timestamp all arrive
 with the `page_view`, so the code is the only thing that has to be sent
 explicitly.
 
@@ -243,6 +256,37 @@ second and lands on a site that shows its own. Consent defaults to **denied**
 exactly as elsewhere, so an un-consented hit is a cookieless ping, and a
 visitor who already accepted anywhere in the family is honoured — the stub
 reads the same `.mmendelson.com` consent cookie every page reads.
+
+#### The counter — why GA4 alone could not count the card
+
+An earlier version of this section said the stub answers "how many people
+scanned that QR code?". **For GA4 it does not, and that was wrong.** A
+cookieless ping is not shown in GA4's reports: unless a property qualifies for
+behavioral modeling (at least 1,000 events a day with `analytics_storage`
+denied for 7 days, plus 1,000 consenting daily users), *"your reports only
+include data available from users who consented"* (Google Analytics Help,
+answer 11161109). Measured on the live `/1/` on 2026-10-02 with the real
+`gtag.js`: a first-time visitor's `page_view` and `short_link_click` both
+leave as `gcs=G100` (denied), and only a visitor carrying an earlier
+`mm_consent=granted` sends `G111`. Someone handed a printed card has, almost
+always, never accepted anything on these sites — so GA4 saw almost none of
+them.
+
+So the stub also POSTs `code`, `to` and `lang` (`navigator.language`) to an
+Apps Script Web App (`apps-script/`, URL in `SHORT_LINK_COUNTER_URL`), which
+appends one row: time, code, destination, language. Nothing in it identifies a
+person — no cookie is set or read, the request goes out with
+`credentials:'omit'` (so not even a Google login cookie rides along), and Apps
+Script never sees the caller's IP — which is why it needs no consent, and why
+the family privacy policy can say so. `keepalive:true` lets the POST outlive
+the navigation; `mode:'no-cors'` because Apps Script sends no CORS headers and
+nothing reads the reply. It fires before anything else and does not delay the
+redirect (measured: 262 ms to land with GA loaded, 1227 ms with GA blocked —
+the same as before). Automated browsers (`navigator.webdriver`) are skipped.
+The server refuses any code that is not 1–4 digits.
+
+The two numbers answer different questions and both stay: the **sheet**
+counts every scan; **GA4** follows what the consenting part of them did next.
 
 > Some short aliases reach an off-site destination through one in-site hop
 > (e.g. `/g/` → `/garmin-apps/` → `apps.mmendelson.com`); the tables show the

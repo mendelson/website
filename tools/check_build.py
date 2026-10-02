@@ -16,6 +16,10 @@ only place the failures below are visible:
     short_link_click event, or the code itself) and so reports nothing while
     still redirecting perfectly — the failure nobody notices, because the link
     keeps working;
+  * a tracked short link that stopped POSTing to the short-link counter, or
+    a counter URL that is still a placeholder — GA4 drops un-consented hits
+    from its reports, so the counter is the only number that sees every scan
+    (see SHORT_LINK_COUNTER_URL in build.py);
   * consent wiring that has quietly regressed — the family cookie helpers, the
     banner-version gate, the banner's own disclosure of the demographic
     signals, and its link to the policy.  Each of those has been broken here
@@ -107,8 +111,42 @@ def main():
                 ("noindex", 'content="noindex"')):
             check("short link {} lost {}".format(src, what), needle in html)
         check("short link {} is indexable".format(src), "noindex" in html)
+        # The counter.  Every needle is a property the count depends on: the
+        # URL; no cookies sent (the "no identifier" promise in the privacy
+        # policy); keepalive, or the navigation cancels the POST; and the
+        # webdriver guard, or our own browser checks count as people.
+        for what, needle in (
+                ("the counter POST", "fetch('{}'".format(build.SHORT_LINK_COUNTER_URL)),
+                ("credentials:'omit'", "credentials:'omit'"),
+                ("keepalive", "keepalive:true"),
+                ("the webdriver guard", "!navigator.webdriver"),
+                ("the counted code", "b.set('code','{}')".format(code))):
+            check("short link {} lost {}".format(src, what), needle in html)
     check("no tracked short links registered", len(build.TRACKED_SHORT_LINKS) > 0)
     print("short links  : {} written".format(len(build.TRACKED_SHORT_LINKS)))
+
+    # 4b. The counter URL is a real deployment, and the only one build.py
+    # names: deploy-appsscript.yml derives DEPLOYMENT_ID from this file and
+    # refuses anything but exactly one /exec URL in it.
+    check("SHORT_LINK_COUNTER_URL is not a deployed /exec URL",
+          re.fullmatch(r"https://script\.google\.com/macros/s/[A-Za-z0-9_-]{20,}/exec",
+                       build.SHORT_LINK_COUNTER_URL) is not None,
+          build.SHORT_LINK_COUNTER_URL)
+    with open(build.__file__, encoding="utf-8") as f:
+        execs = set(re.findall(r"https://script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec", f.read()))
+    check("build.py names {} /exec URLs, the deploy needs exactly 1".format(len(execs)),
+          len(execs) == 1, ", ".join(sorted(execs)))
+    # The deploy's SCRIPT_ID pin (a bound script cannot be found any other
+    # way) must be a real id, or the monthly redeploy fails — or worse, had
+    # the helper not verified pins, would push into some other project.
+    wf = os.path.join(os.path.dirname(build.__file__), ".github", "workflows",
+                      "deploy-appsscript.yml")
+    with open(wf, encoding="utf-8") as f:
+        pin = re.search(r"^\s*SCRIPT_ID:\s*(\S+)\s*$", f.read(), re.M)
+    check("deploy-appsscript.yml has no real SCRIPT_ID pin",
+          pin is not None and re.fullmatch(r"[A-Za-z0-9_-]{30,}", pin.group(1)) is not None,
+          pin.group(1) if pin else "no SCRIPT_ID line")
+    print("counter      : {}".format(build.SHORT_LINK_COUNTER_URL))
 
     # 5. Consent has to survive a careless edit.  Each of these was a real
     # defect at some point: consent kept per-origin so the other two family

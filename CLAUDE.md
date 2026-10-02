@@ -57,13 +57,55 @@ on every deploy**. Never edit `public/`; edit the generator or the fragment.
   the same command, so local and CI cannot drift: it builds, then asserts the *output* — no
   leftover `{{PLACEHOLDER}}`, every registered page/redirect/short link
   present, no URL claimed twice, and every tracked short link still carrying
-  its GA id, its `short_link_click` event and its code. Counts are printed and
+  its GA id, its `short_link_click` event, its code and its POST to the
+  counter (with a real `/exec` URL and a real `SCRIPT_ID` pin — the
+  placeholders fail it). `node tools/test_counter.js` runs beside it in
+  `deploy.yml`. Counts are printed and
   a zero count fails — a checker that checked nothing is the worst possible pass.
 - **CI runs on `main` only.** `deploy.yml` fires on push to `main` and
   `workflow_dispatch`; nothing runs on `pull_request`, so a PR here is verified
   by the local gate above, and the PR body should say which gates ran.
   `preflight.yml` is a diagnostic left from the WordPress cutover and
   deploys nothing.
+- **The short-link COUNT lives in Apps Script, not in GA4.** Every tracked
+  stub POSTs `{code, to, lang}` to `SHORT_LINK_COUNTER_URL` (build.py), the
+  Web App in `apps-script/`, which appends a row to the tab **Acessos** of its
+  spreadsheet ("Short links - mmendelson.com", folder *Garmin spreadsheets* in
+  the owner's Drive; **Resumo** sums it per code, per language and per day). GA4 cannot do this job: the
+  stub shows no consent banner, a first-time visitor's hit goes out as
+  `gcs=G100`, and GA4 leaves denied hits out of its reports below the
+  behavioral-modeling threshold — measured on the live `/1/` on 2026-10-02.
+  Read the counts in the sheet; read the journey (for consenting visitors) in
+  GA4.
+- **The counter is container-bound with scope `spreadsheets.currentonly`** —
+  it can write its own sheet and nothing else. Being bound is also why
+  `deploy-appsscript.yml` pins `SCRIPT_ID`: `clasp list-scripts` cannot see
+  bound scripts. `DEPLOYMENT_ID` is derived from the URL in `build.py` and
+  stored nowhere.
+- **`doGet` is read-only by contract; only `doPost` writes**, and it refuses a
+  code that is not 1–4 digits. `test=1` writes to the **Teste** tab instead of
+  Acessos — use it to prove the path end to end without adding a count. Teste
+  carries the same three summary formulas over its own rows (F1/I1/L1), so a
+  test POST also proves the formulas against real data.
+- **`setup()` runs itself.** Every POST checks a developer-metadata marker on
+  Resumo against `SETUP_VERSION`; on a mismatch (or no Resumo) it runs setup
+  AFTER the row is written, so a setup failure never costs a hit. To change
+  the tabs or formulas: edit `setup()`, bump `SETUP_VERSION`, deploy — the next
+  POST (a `test=1` is enough) applies it to the live sheet. No editor run.
+- **Three things the live sheet taught, each cost a deploy:** (1) the sheet is
+  pt_BR and `setFormula` with `,` came back `#ERROR!` in all three cells, so
+  `writeFormula_` tries `,` and falls back to `;` outside the quoted query;
+  (2) QUERY over an empty Acessos is an error for the per-day pivot, hence the
+  `IFERROR(…, "Ainda sem acessos")`; (3) a Drive-created sheet starts on
+  Pacific time and QUERY's `format` clause did not reach the cells — setup sets
+  the sheet's zone from the script's (`America/Sao_Paulo`) and formats the day
+  column itself.
+- **The stub skips the counter under `navigator.webdriver`**, so automated
+  browsers (`tools/analytics-family-check`, a Playwright run) are not counted
+  as people. A Playwright test of the POST has to override it.
+- **`node tools/test_counter.js`** runs `apps-script/Code.js` against a mocked
+  SpreadsheetApp. It lives in `tools/`, not `apps-script/`, on purpose:
+  `clasp push` uploads every `.js` under `apps-script/` as server code.
 - **Short-link codes are permanent.** `TRACKED_SHORT_LINKS` slugs (`/1/`, …)
   go on paper and into QR codes; re-pointing one makes its history a lie.
   Retire a code, never reuse it — append new ones.
