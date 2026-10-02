@@ -17,9 +17,10 @@
  * so not even a Google login cookie travels with it), and Apps Script never
  * sees the caller's IP address. That is what lets it count without consent.
  *
- * Container-bound to its spreadsheet; the only OAuth scope is
+ * Container-bound to its spreadsheet ("Short links - mmendelson.com", in the
+ * owner's "Garmin spreadsheets" folder); the only OAuth scope is
  * spreadsheets.currentonly — this script can touch its own sheet and nothing
- * else in the account.
+ * else in the account, which matters for code that anyone may call.
  *
  *   doPost  code, to, lang [, test=1]  -> appends a row (test=1: to "Teste")
  *   doGet                               -> health only; reads and writes nothing
@@ -52,7 +53,7 @@ function doPost(e) {
   if (!CODE_RE.test(code)) return json_({ result: 'BAD_CODE' });
   if (!TO_RE.test(to)) return json_({ result: 'BAD_TO' });
   if (!LANG_RE.test(lang)) lang = '';
-  // test=1 proves the whole path — anonymous POST, the OAuth grant, the bound
+  // test=1 proves the whole path — anonymous POST, the OAuth grant, the
   // sheet, the write — without adding a row anyone would count.
   var tab = p.test === '1' ? TAB_TEST : TAB_HITS;
   // Code as text ('1', not 1): the Resumo QUERYs group on it, and a column of
@@ -85,8 +86,8 @@ function setup() {
     '=QUERY(Acessos!A:D, "select D, count(A) where B <> \'\' group by D ' +
     "order by count(A) desc label D 'Idioma', count(A) 'Acessos'\", 1)");
   var book = s.getParent();
-  book.setActiveSheet(s);
-  book.moveActiveSheet(1);
+  // Resumo first. Cosmetic, so it may not fail the setup.
+  try { book.setActiveSheet(s); book.moveActiveSheet(1); } catch (e) {}
   // A new spreadsheet comes with an empty "Página1"; drop any EMPTY tab that
   // is not one of ours. A tab with anything in it is never touched.
   book.getSheets().forEach(function (sh) {

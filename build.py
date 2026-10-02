@@ -175,7 +175,7 @@ TRACKED_SHORT_LINKS = {
 # This URL is the ONE place the deployment is named: deploy-appsscript.yml
 # derives DEPLOYMENT_ID from it (.ci/apps-script.sh resolve build.py), so the
 # deployment it updates is by construction the one the stubs call.
-SHORT_LINK_COUNTER_URL = "https://script.google.com/macros/s/PENDING/exec"
+SHORT_LINK_COUNTER_URL = "https://script.google.com/macros/s/AKfycbwDoayruGgP9wduATFzZsf8Za4ydNCDgrNJvv-0scKe8_fcs_Cv-yRs9e6Hds4vBVuuFA/exec"
 
 
 def read(path):

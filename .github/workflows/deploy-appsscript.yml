@@ -98,7 +98,7 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         env:
           # The bound project — see the header. Verified, not trusted.
-          SCRIPT_ID: PENDING_SCRIPT_ID
+          SCRIPT_ID: 1RzQu9EmSUDej0fnsSZuNgtfO83EiSCvOza8reP8bPmZJiUuEMO5c8exs
         # build.py, not source/: this repo has no source/, and build.py is the
         # one file that names the counter (check_build.py asserts exactly one
         # /exec URL in it, which is what resolve requires).
