@@ -24,9 +24,12 @@
  *
  *   doPost  code, to, lang [, test=1]  -> appends a row (test=1: to "Teste")
  *   doGet                               -> health only; reads and writes nothing
- *   setup()                             -> run once from the editor: creates the
- *                                          tabs and the Resumo formulas, and is
- *                                          the step that grants the OAuth scope
+ *   setup()                             -> creates the tabs and the Resumo
+ *                                          formulas, and sets the sheet's time
+ *                                          zone. Runs by itself on the first POST
+ *                                          after a deploy that bumped
+ *                                          SETUP_VERSION, so nobody has to
+ *                                          remember it; re-runnable from the editor.
  */
 
 var TAB_HITS = 'Acessos';
@@ -58,7 +61,13 @@ function doPost(e) {
   var tab = p.test === '1' ? TAB_TEST : TAB_HITS;
   // Code as text ('1', not 1): the Resumo QUERYs group on it, and a column of
   // numbers would turn a future code like '01' into 1.
-  tab_(tab).appendRow([new Date(), "'" + code, to, lang]);
+  var sheet = tab_(tab);
+  sheet.appendRow([new Date(), "'" + code, to, lang]);
+  // Count FIRST, then tidy: a setup that fails (two first hits racing to
+  // create Resumo) must never cost the hit that triggered it.
+  try {
+    if (needsSetup_(sheet.getParent())) setup();
+  } catch (err) {}
   return json_({ result: 'OK', tab: tab });
 }
 
@@ -66,26 +75,32 @@ function doGet() {
   return json_({ result: 'OK', service: 'short-link-counter' });
 }
 
+// Bump when setup() changes: the next POST then re-runs it on the live sheet,
+// so a fix to the tabs or formulas reaches production with the deploy alone.
+var SETUP_VERSION = '4';
+
 function setup() {
   tab_(TAB_HITS);
-  tab_(TAB_TEST);
+  var test = tab_(TAB_TEST);
   var s = tab_(TAB_SUMMARY, true);
-  s.clear();
-  // setFormula takes the English spelling (commas, English names) whatever
-  // the spreadsheet's locale is; the sheet shows it in its own.
-  // B is a text column, so an empty cell is '' rather than null — `is not
-  // null` would count every blank row below the data.
-  s.getRange('A1').setFormula(
-    '=QUERY(Acessos!A:D, "select B, count(A) where B <> \'\' group by B ' +
-    "label B 'Código', count(A) 'Acessos'\", 1)");
-  s.getRange('D1').setFormula(
-    '=QUERY(Acessos!A:D, "select toDate(A), count(A) where B <> \'\' ' +
-    'group by toDate(A) pivot B order by toDate(A) desc ' +
-    "label toDate(A) 'Dia'\", 1)");
-  s.getRange('J1').setFormula(
-    '=QUERY(Acessos!A:D, "select D, count(A) where B <> \'\' group by D ' +
-    "order by count(A) desc label D 'Idioma', count(A) 'Acessos'\", 1)");
   var book = s.getParent();
+  // The rows store instants; the sheet decides what clock they are shown in
+  // and what "a day" is in Resumo. A sheet created through the Drive API
+  // comes up on Pacific time, so align it with the script (appsscript.json).
+  book.setSpreadsheetTimeZone(Session.getScriptTimeZone());
+  s.clear();
+  // Per-day goes LAST: its pivot grows one column per code, rightwards into
+  // nothing.
+  summary_(s, ['A1', 'D1', 'G1'], TAB_HITS);
+  // QUERY's own `format` clause did not reach the cells (measured: the day
+  // column of the live sheet still showed serials like 46297), so the column
+  // the per-day pivot writes into is formatted directly.
+  s.getRange('G2:G').setNumberFormat('dd/MM/yyyy');
+  // The same three formulas over Teste, beside its rows: a test=1 POST then
+  // proves the formulas against real rows without adding a count to Acessos.
+  test.getRange('F:Z').clear();
+  summary_(test, ['F1', 'I1', 'L1'], TAB_TEST);
+  test.getRange('L2:L').setNumberFormat('dd/MM/yyyy');
   // Resumo first. Cosmetic, so it may not fail the setup.
   try { book.setActiveSheet(s); book.moveActiveSheet(1); } catch (e) {}
   // A new spreadsheet comes with an empty "Página1"; drop any EMPTY tab that
@@ -95,7 +110,62 @@ function setup() {
     if (n !== TAB_HITS && n !== TAB_TEST && n !== TAB_SUMMARY &&
         sh.getLastRow() === 0) book.deleteSheet(sh);
   });
+  s.getDeveloperMetadata().forEach(function (m) {
+    if (m.getKey() === 'setup') m.remove();
+  });
+  s.addDeveloperMetadata('setup', SETUP_VERSION);
   return 'OK';
+}
+
+function needsSetup_(book) {
+  var s = book.getSheetByName(TAB_SUMMARY);
+  if (!s) return true;
+  return !s.getDeveloperMetadata().some(function (m) {
+    return m.getKey() === 'setup' && m.getValue() === SETUP_VERSION;
+  });
+}
+
+// Per code, per language, and per day (one column per code). Wrapped in
+// IFERROR only for the empty sheet (QUERY over no rows is an error, not an
+// empty table): a formula that does not PARSE is #ERROR! whatever wraps it,
+// and writeFormula_ relies on exactly that.
+function summary_(sheet, cells, src) {
+  var r = src + '!A:D';
+  var q = [
+    "select B, count(A) where B <> '' group by B " +
+      "label B 'Código', count(A) 'Acessos'",
+    "select D, count(A) where B <> '' group by D order by count(A) desc " +
+      "label D 'Idioma', count(A) 'Acessos'",
+    "select toDate(A), count(A) where B <> '' group by toDate(A) pivot B " +
+      "order by toDate(A) desc label toDate(A) 'Dia'"
+  ];
+  for (var i = 0; i < cells.length; i++) {
+    writeFormula_(sheet.getRange(cells[i]),
+      '=IFERROR(QUERY(' + r + ', "' + q[i] + '", 1), "Ainda sem acessos")');
+  }
+}
+
+// Whether setFormula wants the spreadsheet locale's argument separator (";"
+// in pt_BR) or always the English ",": not settled by any documentation we
+// trust. Measured on the live pt_BR sheet: with "," all three cells were
+// #ERROR! — including the per-code QUERY, which over the same empty data now
+// renders its header — so this sheet wanted ";". Ask the sheet rather than
+// assume: write ",", and if it does not parse, write ";". Separators inside
+// the quoted query text are left alone.
+function writeFormula_(range, f) {
+  range.setFormula(f);
+  SpreadsheetApp.flush();
+  if (range.getDisplayValue() === '#ERROR!') range.setFormula(semicolons_(f));
+}
+
+function semicolons_(f) {
+  var out = '', quoted = false;
+  for (var i = 0; i < f.length; i++) {
+    var c = f.charAt(i);
+    if (c === '"') quoted = !quoted;
+    out += (c === ',' && !quoted) ? ';' : c;
+  }
+  return out;
 }
 
 function tab_(name, noHeader) {

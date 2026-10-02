@@ -7,18 +7,28 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-function makeBook() {
+// `semicolonLocale` mimics a pt_BR sheet IF setFormula parses in the sheet's
+// locale: a formula with a "," outside its quoted text does not parse there.
+function makeBook(semicolonLocale) {
   const sheets = [];
+  const unquotedComma = (f) => f.replace(/"[^"]*"/g, '').includes(',');
   const mk = (name) => {
     const sh = {
-      name, rows: [], formulas: {}, frozen: 0,
+      name, rows: [], formulas: {}, frozen: 0, meta: [],
       getName: () => name,
       appendRow: (r) => sh.rows.push(r.slice()),
       setFrozenRows: (n) => { sh.frozen = n; },
       getLastRow: () => sh.rows.length,
       clear: () => { sh.rows = []; sh.formulas = {}; },
-      getRange: (a1) => ({ setFormula: (f) => { sh.formulas[a1] = f; } }),
+      getRange: (a1) => ({
+        setFormula: (f) => { sh.formulas[a1] = f; },
+        getDisplayValue: () => (semicolonLocale && unquotedComma(sh.formulas[a1] || '')) ? '#ERROR!' : 'ok',
+        clear: () => { for (const k of Object.keys(sh.formulas)) if (/^[F-Z]/.test(k)) delete sh.formulas[k]; },
+        setNumberFormat: (f) => { (sh.formats = sh.formats || {})[a1] = f; },
+      }),
       getParent: () => book,
+      getDeveloperMetadata: () => sh.meta.map((m) => ({ getKey: () => m.k, getValue: () => m.v, remove: () => sh.meta.splice(sh.meta.indexOf(m), 1) })),
+      addDeveloperMetadata: (k, v) => sh.meta.push({ k, v }),
     };
     return sh;
   };
@@ -29,6 +39,7 @@ function makeBook() {
     getSheets: () => sheets.slice(),
     deleteSheet: (s) => sheets.splice(sheets.indexOf(s), 1),
     setActiveSheet: (s) => { book.active = s; },
+    setSpreadsheetTimeZone: (tz) => { book.tz = tz; },
     moveActiveSheet: (i) => { sheets.splice(sheets.indexOf(book.active), 1); sheets.splice(i - 1, 0, book.active); },
   };
   sheets.push(mk('Página1'));
@@ -37,7 +48,8 @@ function makeBook() {
 
 function load(book) {
   const ctx = {
-    SpreadsheetApp: { getActiveSpreadsheet: () => book },
+    SpreadsheetApp: { getActiveSpreadsheet: () => book, flush: () => {} },
+    Session: { getScriptTimeZone: () => 'America/Sao_Paulo' },
     ContentService: {
       MimeType: { JSON: 'json' },
       createTextOutput: (t) => ({ text: t, setMimeType() { return this; } }),
@@ -69,11 +81,54 @@ t('a valid hit is counted, code kept as text', () => {
   if (!(s.rows[1][0] instanceof Date) && Object.prototype.toString.call(s.rows[1][0]) !== '[object Date]') throw new Error('no timestamp');
 });
 
-t('test=1 writes to Teste, never to Acessos', () => {
+t('test=1 writes to Teste, never counts in Acessos', () => {
   const b = makeBook(), g = load(b);
   eq(post(g, { code: '1', to: 'apps', lang: 'en', test: '1' }), { result: 'OK', tab: 'Teste' }, 'reply');
-  eq(b.getSheetByName('Acessos'), null, 'Acessos created');
+  eq(b.getSheetByName('Acessos').rows.length, 1, 'Acessos has only its header');
   eq(b.getSheetByName('Teste').rows.length, 2, 'Teste rows');
+});
+
+t('the first POST builds Resumo and the time zone by itself', () => {
+  const b = makeBook(), g = load(b);
+  post(g, { code: '1', to: 'apps', lang: 'en' });
+  eq(b.sheets.map((s) => s.name), ['Resumo', 'Acessos', 'Teste'], 'tabs');
+  eq(b.tz, 'America/Sao_Paulo', 'time zone');
+  eq(Object.keys(b.getSheetByName('Resumo').formulas).length, 3, 'formulas');
+  post(g, { code: '1', to: 'apps', lang: 'en' });
+  eq(b.getSheetByName('Acessos').rows.length, 3, 'second hit counted');
+});
+
+t('a sheet that rejects "," gets ";" — outside the quoted query only', () => {
+  const b = makeBook(true), g = load(b);
+  post(g, { code: '1', to: 'apps' });
+  const f = b.getSheetByName('Resumo').formulas.A1;
+  eq(f, '=IFERROR(QUERY(Acessos!A:D; "select B, count(A) where B <> \'\' group by B label B \'Código\', count(A) \'Acessos\'"; 1); "Ainda sem acessos")', 'A1');
+});
+
+t('a sheet that takes "," keeps ","', () => {
+  const b = makeBook(false), g = load(b);
+  post(g, { code: '1', to: 'apps' });
+  if (b.getSheetByName('Resumo').formulas.A1.includes(';')) throw new Error('semicolons written');
+});
+
+t('setup re-runs once per SETUP_VERSION, not on every hit', () => {
+  const b = makeBook(), g = load(b);
+  post(g, { code: '1', to: 'apps' });
+  b.getSheetByName('Resumo').formulas.A1 = 'stale';
+  post(g, { code: '1', to: 'apps' });
+  eq(b.getSheetByName('Resumo').formulas.A1, 'stale', 'no re-run at the same version');
+  b.getSheetByName('Resumo').meta[0].v = '1';
+  post(g, { code: '1', to: 'apps' });
+  if (b.getSheetByName('Resumo').formulas.A1 === 'stale') throw new Error('old version not re-run');
+  eq(b.getSheetByName('Resumo').meta.length, 1, 'one version marker');
+});
+
+t('a failing setup never costs the hit', () => {
+  const b = makeBook(), g = load(b);
+  const insert = b.insertSheet;
+  b.insertSheet = (n) => { if (n === 'Resumo') throw new Error('race'); return insert(n); };
+  eq(post(g, { code: '1', to: 'apps', lang: 'en' }).result, 'OK', 'reply');
+  eq(b.getSheetByName('Acessos').rows.length, 2, 'hit counted');
 });
 
 t('junk codes are refused, nothing written', () => {
@@ -116,8 +171,12 @@ t('setup builds Resumo first, keeps data, drops only empty strangers', () => {
   eq(b.sheets.map((s) => s.name), ['Resumo', 'Notas', 'Acessos', 'Teste'], 'tabs');
   eq(b.getSheetByName('Acessos').rows.length, 2, 'data kept');
   const f = b.getSheetByName('Resumo').formulas;
-  eq(Object.keys(f).sort(), ['A1', 'D1', 'J1'], 'formulas');
-  for (const k in f) if (!/^=QUERY\(Acessos!A:D, "select .* where B <> '' .*", 1\)$/.test(f[k])) throw new Error('formula ' + k + ': ' + f[k]);
+  eq(Object.keys(f).sort(), ['A1', 'D1', 'G1'], 'formulas');
+  for (const k in f) if (!/^=IFERROR\(QUERY\(Acessos!A:D, "select .* where B <> '' .*", 1\), "Ainda sem acessos"\)$/.test(f[k])) throw new Error('formula ' + k + ': ' + f[k]);
+  eq(Object.keys(b.getSheetByName('Teste').formulas).sort(), ['F1', 'I1', 'L1'], 'Teste mirror');
+  eq(b.getSheetByName('Resumo').formats, { 'G2:G': 'dd/MM/yyyy' }, 'day column formatted');
+  eq(b.getSheetByName('Teste').formats, { 'L2:L': 'dd/MM/yyyy' }, 'mirror day column formatted');
+  if (!/QUERY\(Teste!A:D/.test(b.getSheetByName('Teste').formulas.F1)) throw new Error('mirror reads Teste');
   eq(g.setup(), 'OK', 'setup is idempotent');
   eq(b.sheets.map((s) => s.name), ['Resumo', 'Notas', 'Acessos', 'Teste'], 'tabs again');
 });

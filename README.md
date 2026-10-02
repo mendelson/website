@@ -206,8 +206,8 @@ everything above, but they are **measured first**: the source of truth is
 | `/1` | `apps.mmendelson.com` | `short_link_click` `{code: "1", to_site: "apps"}` | `1`, `apps` |
 
 **Where to read "how many people used it": the counter's spreadsheet, not
-GA4.** The sheet is *Short links - mmendelson.com* in the owner's Drive; tab
-**Resumo** totals the hits per code, per day and per browser language, tab
+GA4.** The sheet is *Short links - mmendelson.com* in the owner's Drive (folder *Garmin spreadsheets*); tab
+**Resumo** totals the hits per code, per browser language and per day, tab
 **Acessos** has one row per hit. GA4 only sees the visitors who had already
 accepted analytics cookies somewhere in the family — see *The counter* below.
 
