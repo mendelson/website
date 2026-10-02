@@ -31,6 +31,10 @@ jobs:
       # The short-link counter's server code, against a mocked sheet.
       - name: Short-link counter unit tests
         run: node tools/test_counter.js
+      # The BUILT stub (public/1/) run against real user agents: what it sends
+      # to the counter, and that every value is on the counter's closed lists.
+      - name: Short-link stub test
+        run: node tools/test_stub.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./public

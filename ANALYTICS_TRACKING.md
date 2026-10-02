@@ -135,8 +135,10 @@ ceiling if gtag never loads — measured at 102 ms in the normal case. Consent
 Mode defaults are the same as every other page, so a pre-consent hit is a
 cookieless ping — **and GA4 does not report those** (see below), so this event
 counts only visitors who had already accepted. The full count is the
-**short-link counter**: the stub also POSTs one anonymous row (time, code,
-destination, browser language; no cookie, no identifier) to an Apps Script
+**short-link counter**: the stub also POSTs one row (time, code, destination,
+browser language, and coarse device type / OS family / browser family / time
+zone with the country estimated from it; no cookie, no IP, no device model)
+to an Apps Script
 Web App, and the totals are in its spreadsheet, tab *Resumo*. Mechanics: the
 *Tracked short links* section of [`README.md`](README.md).
 

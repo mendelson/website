@@ -59,8 +59,8 @@ on every deploy**. Never edit `public/`; edit the generator or the fragment.
   present, no URL claimed twice, and every tracked short link still carrying
   its GA id, its `short_link_click` event, its code and its POST to the
   counter (with a real `/exec` URL and a real `SCRIPT_ID` pin — the
-  placeholders fail it). `node tools/test_counter.js` runs beside it in
-  `deploy.yml`. Counts are printed and
+  placeholders fail it). `node tools/test_counter.js` and `node
+  tools/test_stub.js` run beside it in `deploy.yml`. Counts are printed and
   a zero count fails — a checker that checked nothing is the worst possible pass.
 - **CI runs on `main` only.** `deploy.yml` fires on push to `main` and
   `workflow_dispatch`; nothing runs on `pull_request`, so a PR here is verified
@@ -68,10 +68,12 @@ on every deploy**. Never edit `public/`; edit the generator or the fragment.
   `preflight.yml` is a diagnostic left from the WordPress cutover and
   deploys nothing.
 - **The short-link COUNT lives in Apps Script, not in GA4.** Every tracked
-  stub POSTs `{code, to, lang}` to `SHORT_LINK_COUNTER_URL` (build.py), the
-  Web App in `apps-script/`, which appends a row to the tab **Acessos** of its
-  spreadsheet ("Short links - mmendelson.com", folder *Garmin spreadsheets* in
-  the owner's Drive; **Resumo** sums it per code, per language and per day). GA4 cannot do this job: the
+  stub POSTs `{code, to, lang, type, os, browser, tz}` to
+  `SHORT_LINK_COUNTER_URL` (build.py), the Web App in `apps-script/`, which
+  appends a row to the tab **Acessos** of its spreadsheet ("Short links -
+  mmendelson.com", folder *Garmin spreadsheets* in the owner's Drive;
+  **Resumo** sums it per code, type, OS, browser, estimated country, language
+  and day). GA4 cannot do this job: the
   stub shows no consent banner, a first-time visitor's hit goes out as
   `gcs=G100`, and GA4 leaves denied hits out of its reports below the
   behavioral-modeling threshold — measured on the live `/1/` on 2026-10-02.
@@ -84,9 +86,21 @@ on every deploy**. Never edit `public/`; edit the generator or the fragment.
   stored nowhere.
 - **`doGet` is read-only by contract; only `doPost` writes**, and it refuses a
   code that is not 1–4 digits. `test=1` writes to the **Teste** tab instead of
-  Acessos — use it to prove the path end to end without adding a count. Teste
-  carries the same three summary formulas over its own rows (F1/I1/L1), so a
-  test POST also proves the formulas against real data.
+  Acessos — use it to prove the path end to end without adding a count. The
+  tab **Teste resumo** carries the same summary over Teste's rows, so a test
+  POST also proves the formulas against real data.
+- **What a hit records is deliberately coarse, and the owner chose it**: the
+  page reduces the user agent to a device type, an OS family and a browser
+  family (no versions, no device model), plus the device's time zone; the
+  counter keeps type/OS/browser only if they are on its closed lists
+  (`TYPES`/`OSES`/`BROWSERS` in Code.js) and turns the zone into an
+  ESTIMATED country through `apps-script/Zones.js`. No IP, no third-party
+  lookup. `check_build.py` fails if the stub starts sending a field beyond
+  `code, to, lang, type, os, browser, tz` — a new field about the visitor
+  has to be added on purpose. Gender cannot be observed by a page at all.
+- **`apps-script/Zones.js` is generated** (`node tools/gen_zones.js`, from the
+  machine's tzdata `zone.tab` + link aliases, country names from Node's ICU
+  in pt-BR). Do not edit it by hand.
 - **`setup()` runs itself.** Every POST checks a developer-metadata marker on
   Resumo against `SETUP_VERSION`; on a mismatch (or no Resumo) it runs setup
   AFTER the row is written, so a setup failure never costs a hit. To change
@@ -103,9 +117,11 @@ on every deploy**. Never edit `public/`; edit the generator or the fragment.
 - **The stub skips the counter under `navigator.webdriver`**, so automated
   browsers (`tools/analytics-family-check`, a Playwright run) are not counted
   as people. A Playwright test of the POST has to override it.
-- **`node tools/test_counter.js`** runs `apps-script/Code.js` against a mocked
-  SpreadsheetApp. It lives in `tools/`, not `apps-script/`, on purpose:
-  `clasp push` uploads every `.js` under `apps-script/` as server code.
+- **`node tools/test_counter.js`** runs `apps-script/` (Zones.js + Code.js)
+  against a mocked SpreadsheetApp, including the upgrade of a v4 sheet; **`node
+  tools/test_stub.js`** runs the BUILT `/1/` stub against real user agents
+  (build first). Both live in `tools/`, not `apps-script/`, on purpose: `clasp
+  push` uploads every `.js` under `apps-script/` as server code.
 - **Short-link codes are permanent.** `TRACKED_SHORT_LINKS` slugs (`/1/`, …)
   go on paper and into QR codes; re-pointing one makes its history a lie.
   Retire a code, never reuse it — append new ones.

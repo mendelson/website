@@ -11,18 +11,22 @@
  * /1/ stub: a first-time visitor's page_view and short_link_click both go out
  * as gcs=G100 — which is to say, almost every card that gets scanned.
  *
- * So each stub also POSTs one row here, and the row carries NOTHING that
- * identifies a person: the time, the code, the destination and the browser
- * language. No cookie is set or read (the stub sends with credentials:'omit',
- * so not even a Google login cookie travels with it), and Apps Script never
- * sees the caller's IP address. That is what lets it count without consent.
+ * So each stub also POSTs one row here, and the row carries only COARSE
+ * categories: the time, the code, the destination, the browser language, the
+ * device type (celular/tablet/computador), the OS family and the browser
+ * family — each checked against a closed list below, no versions, no device
+ * model — plus the device's time zone and the country estimated from it
+ * (Zones.js; no IP, no third-party lookup). No cookie is set or read (the stub
+ * sends with credentials:'omit', so not even a Google login cookie travels
+ * with it), and Apps Script never sees the caller's IP address.
  *
  * Container-bound to its spreadsheet ("Short links - mmendelson.com", in the
  * owner's "Garmin spreadsheets" folder); the only OAuth scope is
  * spreadsheets.currentonly — this script can touch its own sheet and nothing
  * else in the account, which matters for code that anyone may call.
  *
- *   doPost  code, to, lang [, test=1]  -> appends a row (test=1: to "Teste")
+ *   doPost  code, to, lang, type, os, browser, tz [, test=1]
+ *                                       -> appends a row (test=1: to "Teste")
  *   doGet                               -> health only; reads and writes nothing
  *   setup()                             -> creates the tabs and the Resumo
  *                                          formulas, and sets the sheet's time
@@ -35,7 +39,22 @@
 var TAB_HITS = 'Acessos';
 var TAB_TEST = 'Teste';
 var TAB_SUMMARY = 'Resumo';
-var HEADER = ['Data/hora', 'Código', 'Destino', 'Idioma'];
+var TAB_TEST_SUMMARY = 'Teste resumo';
+// A:I. The QUERYs in summary_ name these columns by letter.
+var HEADER = ['Data/hora', 'Código', 'Destino', 'Idioma', 'Tipo', 'Sistema',
+              'Navegador', 'Fuso horário', 'País (estimado)'];
+
+// The stub classifies the user agent into these and nothing finer; anything
+// else becomes an empty cell. Closed lists, so the anonymous endpoint cannot
+// be used to write free text into the sheet. tools/test_stub.js checks every
+// value the stub can emit is on its list.
+var TYPES = ['celular', 'tablet', 'computador'];
+var OSES = ['Android', 'iOS', 'iPadOS', 'Windows', 'macOS', 'ChromeOS', 'Linux',
+            'outro'];
+var BROWSERS = ['Chrome', 'Safari', 'Firefox', 'Samsung Internet', 'Edge',
+                'Opera', 'Instagram', 'Facebook', 'outro'];
+// IANA zone: "America/Sao_Paulo", "America/Argentina/Buenos_Aires", "UTC".
+var TZ_RE = /^[A-Za-z]+(\/[A-Za-z0-9_+-]+){0,2}$/;
 
 // A code is the slug of a TRACKED_SHORT_LINKS entry: digits only, appended in
 // order, never reused. Anything else is not one of ours and is refused rather
@@ -56,13 +75,20 @@ function doPost(e) {
   if (!CODE_RE.test(code)) return json_({ result: 'BAD_CODE' });
   if (!TO_RE.test(to)) return json_({ result: 'BAD_TO' });
   if (!LANG_RE.test(lang)) lang = '';
+  var tz = String(p.tz || '');
+  if (tz.length > 40 || !TZ_RE.test(tz)) tz = '';
+  var country = (tz && typeof ZONE_COUNTRY !== 'undefined' &&
+                 Object.prototype.hasOwnProperty.call(ZONE_COUNTRY, tz))
+    ? ZONE_COUNTRY[tz] : '';
   // test=1 proves the whole path — anonymous POST, the OAuth grant, the
   // sheet, the write — without adding a row anyone would count.
   var tab = p.test === '1' ? TAB_TEST : TAB_HITS;
   // Code as text ('1', not 1): the Resumo QUERYs group on it, and a column of
   // numbers would turn a future code like '01' into 1.
   var sheet = tab_(tab);
-  sheet.appendRow([new Date(), "'" + code, to, lang]);
+  sheet.appendRow([new Date(), "'" + code, to, lang,
+                   pick_(p.type, TYPES), pick_(p.os, OSES),
+                   pick_(p.browser, BROWSERS), tz, country]);
   // Count FIRST, then tidy: a setup that fails (two first hits racing to
   // create Resumo) must never cost the hit that triggered it.
   try {
@@ -77,38 +103,43 @@ function doGet() {
 
 // Bump when setup() changes: the next POST then re-runs it on the live sheet,
 // so a fix to the tabs or formulas reaches production with the deploy alone.
-var SETUP_VERSION = '4';
+var SETUP_VERSION = '5';
 
 function setup() {
-  tab_(TAB_HITS);
+  var hits = tab_(TAB_HITS);
   var test = tab_(TAB_TEST);
   var s = tab_(TAB_SUMMARY, true);
+  var ts = tab_(TAB_TEST_SUMMARY, true);
   var book = s.getParent();
   // The rows store instants; the sheet decides what clock they are shown in
   // and what "a day" is in Resumo. A sheet created through the Drive API
   // comes up on Pacific time, so align it with the script (appsscript.json).
   book.setSpreadsheetTimeZone(Session.getScriptTimeZone());
-  s.clear();
-  // Per-day goes LAST: its pivot grows one column per code, rightwards into
-  // nothing.
-  summary_(s, ['A1', 'D1', 'G1'], TAB_HITS);
-  // QUERY's own `format` clause did not reach the cells (measured: the day
-  // column of the live sheet still showed serials like 46297), so the column
-  // the per-day pivot writes into is formatted directly.
-  s.getRange('G2:G').setNumberFormat('dd/MM/yyyy');
-  // The same three formulas over Teste, beside its rows: a test=1 POST then
-  // proves the formulas against real rows without adding a count to Acessos.
-  test.getRange('F:Z').clear();
-  summary_(test, ['F1', 'I1', 'L1'], TAB_TEST);
-  test.getRange('L2:L').setNumberFormat('dd/MM/yyyy');
+  // Up to v4 Teste carried its own summary formulas from column F on, which
+  // is where the v5 data columns now are. Clear FORMULA cells only (their
+  // spilled results go with them); a row's data is never a formula, so this
+  // can run on every setup without touching a single hit.
+  clearFormulas_(test);
+  // Header row of both data tabs: older rows simply have the new columns
+  // empty.
+  [hits, test].forEach(function (sh) {
+    sh.getRange(1, 1, 1, HEADER.length).setValues([HEADER]);
+  });
+  // The same summary over Acessos and over Teste: a test=1 POST then proves
+  // the formulas against real rows without adding a count to Acessos.
+  [[s, TAB_HITS], [ts, TAB_TEST]].forEach(function (pair) {
+    pair[0].clear();
+    summary_(pair[0], pair[1]);
+  });
   // Resumo first. Cosmetic, so it may not fail the setup.
   try { book.setActiveSheet(s); book.moveActiveSheet(1); } catch (e) {}
   // A new spreadsheet comes with an empty "Página1"; drop any EMPTY tab that
   // is not one of ours. A tab with anything in it is never touched.
+  var ours = [TAB_HITS, TAB_TEST, TAB_SUMMARY, TAB_TEST_SUMMARY];
   book.getSheets().forEach(function (sh) {
-    var n = sh.getName();
-    if (n !== TAB_HITS && n !== TAB_TEST && n !== TAB_SUMMARY &&
-        sh.getLastRow() === 0) book.deleteSheet(sh);
+    if (ours.indexOf(sh.getName()) < 0 && sh.getLastRow() === 0) {
+      book.deleteSheet(sh);
+    }
   });
   s.getDeveloperMetadata().forEach(function (m) {
     if (m.getKey() === 'setup') m.remove();
@@ -125,24 +156,58 @@ function needsSetup_(book) {
   });
 }
 
-// Per code, per language, and per day (one column per code). Wrapped in
-// IFERROR only for the empty sheet (QUERY over no rows is an error, not an
-// empty table): a formula that does not PARSE is #ERROR! whatever wraps it,
-// and writeFormula_ relies on exactly that.
-function summary_(sheet, cells, src) {
-  var r = src + '!A:D';
-  var q = [
-    "select B, count(A) where B <> '' group by B " +
-      "label B 'Código', count(A) 'Acessos'",
-    "select D, count(A) where B <> '' group by D order by count(A) desc " +
-      "label D 'Idioma', count(A) 'Acessos'",
-    "select toDate(A), count(A) where B <> '' group by toDate(A) pivot B " +
-      "order by toDate(A) desc label toDate(A) 'Dia'"
-  ];
-  for (var i = 0; i < cells.length; i++) {
-    writeFormula_(sheet.getRange(cells[i]),
-      '=IFERROR(QUERY(' + r + ', "' + q[i] + '", 1), "Ainda sem acessos")');
+// One block per question, side by side, each two columns wide with a blank
+// column between; per-day goes LAST because its pivot grows one column per
+// code, rightwards into nothing. Wrapped in IFERROR only for the empty sheet
+// (QUERY over no rows is an error, not an empty table): a formula that does
+// not PARSE is #ERROR! whatever wraps it, and writeFormula_ relies on that.
+var SUMMARY = [
+  ['A1', "select B, count(A) where B <> '' group by B " +
+         "label B 'Código', count(A) 'Acessos'"],
+  ['D1', byCount_('E', 'Tipo')],
+  ['G1', byCount_('F', 'Sistema')],
+  ['J1', byCount_('G', 'Navegador')],
+  ['M1', byCount_('I', 'País (estimado)')],
+  ['P1', byCount_('D', 'Idioma')],
+  ['S1', "select toDate(A), count(A) where B <> '' group by toDate(A) " +
+         "pivot B order by toDate(A) desc label toDate(A) 'Dia'"]
+];
+var DAY_COLUMN = 'S2:S';
+
+function byCount_(col, label) {
+  return 'select ' + col + ", count(A) where B <> '' group by " + col +
+    ' order by count(A) desc label ' + col + " '" + label +
+    "', count(A) 'Acessos'";
+}
+
+function summary_(sheet, src) {
+  // The per-day pivot needs room to grow; a new tab has 26 columns.
+  if (sheet.getMaxColumns() < 40) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), 40 - sheet.getMaxColumns());
   }
+  SUMMARY.forEach(function (b) {
+    writeFormula_(sheet.getRange(b[0]), '=IFERROR(QUERY(' + src + '!A:I, "' +
+      b[1] + '", 1), "Ainda sem acessos")');
+  });
+  // QUERY's own `format` clause did not reach the cells (measured: the day
+  // column of the live sheet still showed serials like 46297), so the column
+  // the per-day pivot writes into is formatted directly.
+  sheet.getRange(DAY_COLUMN).setNumberFormat('dd/MM/yyyy');
+}
+
+function clearFormulas_(sheet) {
+  var range = sheet.getDataRange();
+  var f = range.getFormulas();
+  for (var r = 0; r < f.length; r++) {
+    for (var c = 0; c < f[r].length; c++) {
+      if (f[r][c]) sheet.getRange(r + 1, c + 1).clearContent();
+    }
+  }
+}
+
+function pick_(v, list) {
+  v = String(v || '');
+  return list.indexOf(v) >= 0 ? v : '';
 }
 
 // Whether setFormula wants the spreadsheet locale's argument separator (";"
