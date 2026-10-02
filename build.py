@@ -273,7 +273,12 @@ def redirect_tracked_html(target, code, to_site):
     simply abandoned.)
 
     The COUNT does not depend on GA at all.  Before anything else the stub
-    POSTs {code, to, lang} to SHORT_LINK_COUNTER_URL with credentials:'omit'
+    POSTs {code, to, lang, type, os, browser, tz} to SHORT_LINK_COUNTER_URL —
+    the user agent reduced IN THE PAGE to coarse families (celular/tablet/
+    computador; Android/iOS/…; Chrome/Safari/…; no versions, no device model),
+    and the device's time zone, from which the counter estimates the country.
+    tools/test_stub.js runs this script against real user agents.  It is sent
+    with credentials:'omit'
     (no cookie of any domain travels, Google's included) and keepalive:true
     (the request survives the navigation that follows).  mode:'no-cors'
     because Apps Script sends no CORS headers — the reply is opaque and
@@ -324,9 +329,23 @@ def redirect_tracked_html(target, code, to_site):
         '</head><body>'
         '<p>Redirecting to <a id="mm-go" href="{ta}">{label}</a>…</p>'
         '<script>(function(){'
-        'if(!navigator.webdriver&&window.fetch){try{var b=new URLSearchParams();'
+        'if(!navigator.webdriver&&window.fetch){try{var b=new URLSearchParams(),'
+        "u=navigator.userAgent||'',z='',"
+        'ipad=/iPad/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1);'
         "b.set('code','{code}');b.set('to','{to}');"
         "b.set('lang',navigator.language||'');"
+        "b.set('type',ipad||/Tablet/.test(u)||(/Android/.test(u)&&!/Mobile/.test(u))"
+        "?'tablet':/Mobi|iPhone|iPod|Android/.test(u)?'celular':'computador');"
+        "b.set('os',/Android/.test(u)?'Android':ipad?'iPadOS':/iPhone|iPod/.test(u)"
+        "?'iOS':/Windows/.test(u)?'Windows':/CrOS/.test(u)?'ChromeOS'"
+        ":/Mac OS X/.test(u)?'macOS':/Linux/.test(u)?'Linux':'outro');"
+        "b.set('browser',/Instagram/.test(u)?'Instagram':/FBAN|FBAV/.test(u)"
+        "?'Facebook':/SamsungBrowser/.test(u)?'Samsung Internet'"
+        ":/Edg(A|iOS)?\\//.test(u)?'Edge':/OPR\\/|OPT\\//.test(u)?'Opera'"
+        ":/Firefox|FxiOS/.test(u)?'Firefox':/Chrome|CriOS/.test(u)?'Chrome'"
+        ":/Safari/.test(u)?'Safari':'outro');"
+        "try{z=Intl.DateTimeFormat().resolvedOptions().timeZone||'';}catch(e){}"
+        "b.set('tz',z);"
         "fetch('{counter}',{method:'POST',mode:'no-cors',credentials:'omit',"
         'keepalive:true,body:b});}catch(e){}}'
         "var a=document.getElementById('mm-go'),done=false;"

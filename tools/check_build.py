@@ -120,8 +120,18 @@ def main():
                 ("credentials:'omit'", "credentials:'omit'"),
                 ("keepalive", "keepalive:true"),
                 ("the webdriver guard", "!navigator.webdriver"),
-                ("the counted code", "b.set('code','{}')".format(code))):
+                ("the counted code", "b.set('code','{}')".format(code)),
+                ("the device type", "b.set('type',"),
+                ("the OS family", "b.set('os',"),
+                ("the browser family", "b.set('browser',"),
+                ("the time zone", "b.set('tz',")):
             check("short link {} lost {}".format(src, what), needle in html)
+        # What the stub sends is a closed set: a new b.set() here is a new
+        # field about the visitor, and has to be added on purpose.
+        fields = sorted(set(re.findall(r"b\.set\('([a-z]+)'", html)))
+        check("short link {} sends {} — expected exactly code, to, lang, type, "
+              "os, browser, tz".format(src, fields),
+              fields == sorted(["code", "to", "lang", "type", "os", "browser", "tz"]))
     check("no tracked short links registered", len(build.TRACKED_SHORT_LINKS) > 0)
     print("short links  : {} written".format(len(build.TRACKED_SHORT_LINKS)))
 
