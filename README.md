@@ -18,8 +18,8 @@ assets/
 build.py          The generator: content + template -> public/
 apps-script/      The short-link counter (Apps Script Web App, bound to its
                   own spreadsheet) — deployed by deploy-appsscript.yml
-.ci/              apps-script.sh (clasp helper, from AI-Instructions) and
-                  claude_md_test.sh (rule 19 gate)
+.ci/              apps-script.sh — clasp helper (login, pull, resolve the
+                  deployment the stubs call)
 tools/
   fetch_assets.sh Downloads original media from the old WP site
   check_build.py  Builds, then asserts the output is complete and substituted
@@ -35,7 +35,6 @@ public/           Generated output (git-ignored; rebuilt on every deploy)
 ```bash
 python3 tools/check_build.py   # builds into ./public, then checks the output
 node tools/test_counter.js     # the short-link counter's server code
-bash .ci/claude_md_test.sh     # CLAUDE.md still references AI-Instructions
 python3 build.py               # just build, no checks
 # preview:
 cd public && python3 -m http.server 8000   # then open http://localhost:8000
@@ -318,48 +317,6 @@ steps that no code can do are all in
 ```bash
 bash tools/analytics-family-check/run.sh   # needs all three repos side by side
 ```
-
-## AI-Instructions compliance
-
-Status against the account-wide rules in
-[AI-Instructions](https://github.com/mendelson/AI-Instructions). `✅` satisfied ·
-`🟡` wired, blocked on setup · `❌` not done · `n/a` with the reason.
-This is a static website, not a Connect IQ app: the rules about devices,
-tiers, `.iq` exports and Store listings have nothing here to apply to, and say
-so rather than being left out.
-
-| Rule | Status | How it's satisfied |
-| :-- | :--: | :-- |
-| **1** — PRs open as drafts, marked ready only when done | ✅ | behavioural; CI does not run on `pull_request` here, so a PR is verified by the local gates and the body says which ran |
-| **2** — Critical thinking, no pointless questions, token economy | ✅ | behavioural |
-| **3** — Verify, then assert | ✅ | the counter section above corrects a claim this README made about GA4 cookieless pings, with the measurement that disproved it |
-| **4** — Commit AND push, both, by default | ✅ | behavioural |
-| **5** — Do not dispatch CI nobody asked for | ✅ | `deploy.yml` fires on push to `main` only; `deploy-appsscript.yml` on `apps-script/**` changes and monthly |
-| **6** — Do not store what an artifact already contains | ✅ | GA id defined once in `build.py`; counter `DEPLOYMENT_ID` derived from `SHORT_LINK_COUNTER_URL`; `SCRIPT_ID` is pinned in the workflow **because** a bound script cannot be listed, and the pin is verified against the deployment before every push |
-| **7** — A green run that ran nothing is the worst possible green | ✅ | `check_build.py` prints a count per check and fails on zero; `tools/test_counter.js` exits non-zero unless it ran > 0 tests |
-| **8** — Tests at version 0 | n/a | no versioned app |
-| **9** — Test-mode switch committed at its shippable value | ✅ | the counter's only test path is the `test=1` request parameter; committed code has no mode to flip |
-| **10** — Every export produces `evidences/<version>/` | n/a | no `.iq` export |
-| **11** — Standardized actions + templates | 🟡 | `deploy-appsscript.yml` and `.ci/apps-script.sh` / `.ci/claude_md_test.sh` come from `AI-Instructions/templates/`; **pending:** there is no shared template for a static-site Pages deploy, so `deploy.yml` is this repo's own |
-| **12** — Local first | ✅ | every CI gate is a local command (Build locally, above); nothing is CI-only |
-| **13** — Apps Script managed + deployed in-repo | ✅ | `apps-script/` + `deploy-appsscript.yml` (clasp, in-place redeploy, empty-folder guard, health check) |
-| **14** — Ten languages, English fallback | ❌ | five (`de en es fr pt`) — **pending:** `ru nl ja ko zh` for the rule's ten, and `it`, which both sister sites carry (see `AI-Instructions/docs/LOCALIZATION.md`) |
-| **15** — Build emits no warnings (ratcheted) | ✅ | `build.py` prints no warnings; nothing to ratchet |
-| **16** — Any device testable from `manifest.xml` | n/a | no devices |
-| **17** — Owned devices always tested | n/a | no devices |
-| **18** — Real device id is testing-only | n/a | no device ids |
-| **19** — `CLAUDE.md` references AI-Instructions; no copied rules | ✅ | reference header; `.ci/claude_md_test.sh` runs in `deploy.yml` |
-| **20** — Every message ends with a `tl;dr` | ✅ | behavioural |
-| **21** — Store listing mirrored in `Connect IQ details/` | n/a | no Store listing |
-| **22** — README carries this compliance checklist | ✅ | this table |
-| **23** — Tiers own their code | n/a | no tiers |
-| **24** — Tiering hierarchy documented | n/a | no tiers |
-| **25** — Harness never leaves the tree built-able-wrong | ✅ | the only generated output is `public/`, git-ignored and rebuilt from scratch on every build |
-| **26** — Held to every rule; nothing regressed | ✅ | a row per rule, `n/a` ones argued rather than omitted |
-| **27** — Apps Script deploy also runs monthly | ✅ | `deploy-appsscript.yml` `cron: '0 13 1 * *'` (13:00 UTC on the 1st; this repo has no other cron to collide with) |
-| **28** — Secrets come from `secrets-manager` | 🟡 | consumes `CLASP_CREDENTIALS` only (`deploy-appsscript.yml`) — **pending:** this repo's row in `secrets-manager/secrets.yml` (`apps-script` group); until then the deploy skips with a warning |
-| **29** — Shared desktop: device lock | n/a | no simulator |
-| **30** — Store listing in all 28 languages | n/a | no Store listing |
 
 ## Notes / known gaps
 

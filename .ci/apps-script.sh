@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apps Script import/inspect helper — AI-Instructions rule 13.
+# Apps Script import/inspect helper (clasp).
 #
 # The point of this script: the DEVELOPER SHOULD NEVER COPY-PASTE .gs SOURCE.
 # An agent with a clasp session pulls the live project straight into the repo.
@@ -213,7 +213,7 @@ cmd_resolve() {
     # accept the FIRST project the account can see and the deploy would push
     # this app's code into a project chosen at random. Not hypothetical — the
     # backreference in that sed was eaten into a 0x01 byte in this repo once
-    # already (a7cbe7d), and the AI-Instructions template and the GarminPay twin
+    # already (a7cbe7d) in another copy of this helper, and two copies
     # still carry the corrupted line today.
     [ -n "$dep" ] || die "could not extract a deployment id from '$urls' — the sed backreference is broken (see a7cbe7d)"
 

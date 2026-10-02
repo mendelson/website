@@ -2,12 +2,12 @@ name: Deploy to Apps Script
 
 # Keeps the short-link counter (apps-script/ — the Web App every tracked
 # short-link stub POSTs one anonymous row to) in sync with main. On every push
-# to main that touches apps-script/, and monthly (rule 27), this pushes the
+# to main that touches apps-script/, and monthly, this pushes the
 # code with clasp and redeploys the EXISTING deployment in place, so the /exec
 # URL the stubs call never moves.
 #
-# Requires ONE repository secret, delivered by secrets-manager (rule 28) —
-# never pasted here by hand:
+# Requires ONE repository secret, delivered by mendelson/secrets-manager —
+# never pasted here by hand (a hand-set value is overwritten by its daily sync):
 #   CLASP_CREDENTIALS  - full contents of ~/.clasprc.json from `clasp login`
 #
 # DEPLOYMENT_ID is not stored anywhere: it is derived from
@@ -23,7 +23,7 @@ name: Deploy to Apps Script
 # health check after it.
 
 on:
-  # Rule 27: monthly too, so a backend nobody has touched still proves main is
+  # Monthly too, so a backend nobody has touched still proves main is
   # what is deployed. 13:00 UTC, NOT 12:00: an in-place redeploy leaves Apps
   # Script serving a Drive 404 for a short window, and dedupe-appsscript.yml
   # ticks at 00/04/08/12/16/20 (a tick hit that window 37 s after a redeploy,
@@ -56,7 +56,7 @@ jobs:
           CLASP_CREDENTIALS: ${{ secrets.CLASP_CREDENTIALS }}
         run: |
           if [ -z "$CLASP_CREDENTIALS" ]; then
-            echo "::warning::CLASP_CREDENTIALS not set — skipping deploy. See AI-Instructions rule 13."
+            echo "::warning::CLASP_CREDENTIALS not set — skipping deploy (it comes from mendelson/secrets-manager)."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"

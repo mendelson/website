@@ -1,32 +1,8 @@
-<!-- ai-instructions:reference — rule 19. Do not replace with copied rules. -->
+# CLAUDE.md
 
-## Authoritative instructions — read them, they are NOT here
-
-The account-wide rules live in **[`mendelson/AI-Instructions`](https://github.com/mendelson/AI-Instructions)**
-and that repo is the single source of truth. **Read its `README.md` at the start
-of every session**, before planning work in this repo. If the session does not
-have it attached, attach it first (`add_repo` → `mendelson/AI-Instructions`);
-the rules are not optional context.
-
-Start with `README.md` (the rules themselves), then the `docs/` page for
-whatever you are touching — build, tests, localization, warnings, tiering,
-Apps Script, verification method.
-
-**This file does not restate those rules, and must never be edited to.** A copy
-here is correct the day it is written and silently wrong afterwards, because
-nothing keeps it in sync — that is rule 19, and it was written after a repo's
-mirrored copy quietly dropped a rule and ran a whole session without it.
-
-What belongs here instead: **facts about THIS repo** — its layout, its build
-quirks, the findings that cost someone a day, and *how* a rule lands here
-(naming a rule and pointing at the file it applies to is a reference; explaining
-what the rule is, is a copy).
-
-**If this file ever contains restated rules, or is missing this header, fix it
-in the session you notice** — do not file it as future work. Procedure:
-`AI-Instructions/docs/INSTRUCTIONS-SOURCING.md`.
-
----
+Facts about **this** repo — its layout, its build quirks, and the findings that
+cost someone a day. Nothing here is an account-wide policy: this is a website,
+not one of the Garmin app repos, so it is not governed by `AI-Instructions`.
 
 ## This repo
 
@@ -83,7 +59,7 @@ on every deploy**. Never edit `public/`; edit the generator or the fragment.
   present, no URL claimed twice, and every tracked short link still carrying
   its GA id, its `short_link_click` event, its code and its POST to the
   counter (with a real `/exec` URL and a real `SCRIPT_ID` pin — the
-  placeholders fail it). `.ci/claude_md_test.sh` runs beside it in
+  placeholders fail it). `node tools/test_counter.js` runs beside it in
   `deploy.yml`. Counts are printed and
   a zero count fails — a checker that checked nothing is the worst possible pass.
 - **CI runs on `main` only.** `deploy.yml` fires on push to `main` and
