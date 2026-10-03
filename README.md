@@ -211,7 +211,9 @@ everything above, but they are **measured first**: the source of truth is
 GA4.** The sheet is *Short links - mmendelson.com* in the owner's Drive (folder *Garmin spreadsheets*); tab
 **Resumo** totals the hits per code, device type, OS, browser, estimated
 country, browser language and day, tab
-**Acessos** has one row per hit. GA4 only sees the visitors who had already
+**Acessos** has one row per hit, with its time twice: in column A on the
+owner's clock (Brasília — the sheet's zone) and in column J on the visitor's
+own clock. GA4 only sees the visitors who had already
 accepted analytics cookies somewhere in the family — see *The counter* below.
 
 `mmendelson.com/1` works without the trailing slash: GitHub Pages 301s it to
@@ -287,7 +289,8 @@ third-party lookup, and the server keeps type/OS/browser only if they are on
 its closed lists. No cookie is set or read, the request goes out with
 `credentials:'omit'` (so not even a Google login cookie rides along), and Apps
 Script never sees the caller's IP. The country is an estimate: it is where
-the device's clock is set. `keepalive:true` lets the POST outlive
+the device's clock is set. The visitor's local time is not sent either: the
+counter works it out from the same zone. `keepalive:true` lets the POST outlive
 the navigation; `mode:'no-cors'` because Apps Script sends no CORS headers and
 nothing reads the reply. It fires before anything else and does not delay the
 redirect (measured: 262 ms to land with GA loaded, 1227 ms with GA blocked —

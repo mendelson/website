@@ -9,8 +9,15 @@ const path = require('path');
 const vm = require('vm');
 
 const SRC = path.join(__dirname, '..', 'apps-script');
-const HEADER9 = ['Data/hora', 'Código', 'Destino', 'Idioma', 'Tipo', 'Sistema',
-                 'Navegador', 'Fuso horário', 'País (estimado)'];
+const HEADER10 = ['Data/hora (Brasília)', 'Código', 'Destino', 'Idioma', 'Tipo', 'Sistema',
+                  'Navegador', 'Fuso horário', 'País (estimado)', 'Data/hora (fuso do visitante)'];
+
+// What a cell shows for a Date written while the sheet was on `zone`: the
+// instant's wall clock there. Sheets keeps the serial, not the instant.
+function shown(d, zone) {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(d);
+}
+const isDate = (x) => Object.prototype.toString.call(x) === '[object Date]';
 
 // "F1" -> [1, 6]
 function rc(a1) {
@@ -32,7 +39,7 @@ function makeBook(semicolonLocale) {
   const unquotedComma = (f) => f.replace(/"[^"]*"/g, '').includes(',');
   const mk = (name) => {
     const sh = {
-      name, rows: [], formulas: {}, formats: {}, frozen: 0, meta: [], maxCols: 26,
+      name, rows: [], formulas: {}, formats: {}, frozen: 0, meta: [], maxCols: 26, writes: 0,
       getName: () => name,
       appendRow: (r) => sh.rows.push(r.slice()),
       setFrozenRows: (n) => { sh.frozen = n; },
@@ -40,7 +47,7 @@ function makeBook(semicolonLocale) {
       clear: () => { sh.rows = []; sh.formulas = {}; sh.formats = {}; },
       getMaxColumns: () => sh.maxCols,
       insertColumnsAfter: (after, n) => { sh.maxCols += n; },
-      getRange: (a, col) => {
+      getRange: (a, col, nr = 1, nc = 1) => {
         const key = typeof a === 'string' ? a : a1(a, col);
         return {
           setFormula: (f) => { sh.formulas[key] = f; },
@@ -49,9 +56,16 @@ function makeBook(semicolonLocale) {
           clearContent: () => { delete sh.formulas[key]; },
           setValues: (v) => {
             const [r, c] = rc(key);
-            while (sh.rows.length < r) sh.rows.push([]);
-            v[0].forEach((x, i) => { sh.rows[r - 1][c - 1 + i] = x; });
+            sh.writes++;
+            v.forEach((row, j) => {
+              while (sh.rows.length < r + j) sh.rows.push([]);
+              row.forEach((x, i) => { sh.rows[r - 1 + j][c - 1 + i] = x; });
+            });
           },
+          getValues: () => Array.from({ length: nr }, (_, j) => Array.from({ length: nc }, (_, i) => {
+            const x = (sh.rows[rc(key)[0] - 1 + j] || [])[rc(key)[1] - 1 + i];
+            return x === undefined ? '' : x;
+          })),
         };
       },
       getDataRange: () => ({
@@ -78,6 +92,8 @@ function makeBook(semicolonLocale) {
     deleteSheet: (s) => sheets.splice(sheets.indexOf(s), 1),
     setActiveSheet: (s) => { book.active = s; },
     setSpreadsheetTimeZone: (tz) => { book.tz = tz; },
+    // A sheet created through the Drive API starts on Pacific time.
+    getSpreadsheetTimeZone: () => book.tz || 'America/Los_Angeles',
     moveActiveSheet: (i) => { sheets.splice(sheets.indexOf(book.active), 1); sheets.splice(i - 1, 0, book.active); },
   };
   sheets.push(mk('Página1'));
@@ -89,6 +105,17 @@ function load(book, files = ['Zones.js', 'Code.js']) {
   const ctx = {
     SpreadsheetApp: { getActiveSpreadsheet: () => book, flush: () => {} },
     Session: { getScriptTimeZone: () => 'America/Sao_Paulo' },
+    // Only 'Z' is used. Like Java's TimeZone, an id it does not know is GMT.
+    Utilities: {
+      formatDate: (d, tz, fmt) => {
+        if (fmt !== 'Z') throw new Error('format ' + fmt);
+        let o;
+        try { o = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'longOffset' }).formatToParts(d).find((x) => x.type === 'timeZoneName').value; }
+        catch (e) { return '+0000'; }
+        const m = o.match(/^GMT([+-])(\d\d):(\d\d)$/);
+        return m ? m[1] + m[2] + m[3] : '+0000';
+      },
+    },
     ContentService: {
       MimeType: { JSON: 'json' },
       createTextOutput: (t) => ({ text: t, setMimeType() { return this; } }),
@@ -115,34 +142,90 @@ t('a valid hit is counted with every coarse field, code kept as text', () => {
   const b = makeBook(), g = load(b);
   eq(post(g, FULL), { result: 'OK', tab: 'Acessos' }, 'reply');
   const s = b.getSheetByName('Acessos');
-  eq(s.rows[0], HEADER9, 'header');
+  eq(s.rows[0], HEADER10, 'header');
   eq(s.rows.length, 2, 'rows');
-  eq(s.rows[1].slice(1), ["'1", 'apps', 'pt-BR', 'celular', 'Android', 'Chrome', 'America/Sao_Paulo', 'Brasil'], 'row');
-  if (Object.prototype.toString.call(s.rows[1][0]) !== '[object Date]') throw new Error('no timestamp');
+  eq(s.rows[1].slice(1, 9), ["'1", 'apps', 'pt-BR', 'celular', 'Android', 'Chrome', 'America/Sao_Paulo', 'Brasil'], 'row');
+  if (!isDate(s.rows[1][0])) throw new Error('no timestamp');
+  // Written before the first setup, so the sheet was still on Pacific time.
+  eq(shown(s.rows[1][9], 'America/Los_Angeles'), shown(s.rows[1][0], 'America/Sao_Paulo'), 'visitor time');
 });
 
 t('the country is estimated from the zone, legacy names included', () => {
   const b = makeBook(), g = load(b);
   for (const [tz, country] of [['Asia/Calcutta', 'Índia'], ['Europe/Lisbon', 'Portugal'], ['America/Manaus', 'Brasil'], ['Mars/Olympus', ''], ['UTC', '']]) {
     post(g, Object.assign({}, FULL, { tz }));
-    eq(b.getSheetByName('Acessos').rows.slice(-1)[0].slice(7), [tz, country], tz);
+    eq(b.getSheetByName('Acessos').rows.slice(-1)[0].slice(7, 9), [tz, country], tz);
   }
 });
 
 t('anything off the closed lists is blanked, never written as text', () => {
   const b = makeBook(), g = load(b);
   post(g, Object.assign({}, FULL, { type: 'phone', os: 'Android 14', browser: '=IMPORTXML("x")', tz: '=1+1' }));
-  eq(b.getSheetByName('Acessos').rows[1].slice(4), ['', '', '', '', ''], 'off-list');
+  eq(b.getSheetByName('Acessos').rows[1].slice(4), ['', '', '', '', '', ''], 'off-list');
   post(g, Object.assign({}, FULL, { tz: 'America/' + 'x'.repeat(40) }));
-  eq(b.getSheetByName('Acessos').rows[2].slice(7), ['', ''], 'too long');
+  eq(b.getSheetByName('Acessos').rows[2].slice(7), ['', '', ''], 'too long');
   post(g, { code: '1', to: 'apps' });
-  eq(b.getSheetByName('Acessos').rows[3].slice(3), ['', '', '', '', '', ''], 'old stub, no fields');
+  eq(b.getSheetByName('Acessos').rows[3].slice(3), ['', '', '', '', '', '', ''], 'old stub, no fields');
 });
 
-t('without Zones.js the hit is still counted, country blank', () => {
+t('without Zones.js the hit is still counted, country and visitor time blank', () => {
   const b = makeBook(), g = load(b, ['Code.js']);
   eq(post(g, FULL).result, 'OK', 'reply');
-  eq(b.getSheetByName('Acessos').rows[1][8], '', 'country');
+  eq(b.getSheetByName('Acessos').rows[1].slice(8), ['', ''], 'country, time');
+});
+
+t("the visitor's time is the hit on the visitor's clock, for known zones only", () => {
+  const b = makeBook(), g = load(b);
+  post(g, FULL); // runs setup: the sheet is on Sao Paulo from here on
+  const zones = ['America/Sao_Paulo', 'Europe/Lisbon', 'Asia/Kathmandu', 'Asia/Calcutta', 'America/Manaus', 'Pacific/Auckland', 'UTC'];
+  for (const tz of zones) post(g, Object.assign({}, FULL, { tz }));
+  const rows = b.getSheetByName('Acessos').rows.slice(-zones.length);
+  rows.forEach((r, i) => eq(shown(r[9], 'America/Sao_Paulo'), shown(r[0], zones[i] === 'UTC' ? 'UTC' : zones[i]), zones[i]));
+  // Mars/Olympus has the shape of a zone; Utilities would call it GMT.
+  for (const tz of ['Mars/Olympus', 'Etc/GMT+3', '']) {
+    post(g, Object.assign({}, FULL, { tz }));
+    eq(b.getSheetByName('Acessos').rows.slice(-1)[0][9], '', 'unknown ' + tz);
+  }
+  eq(b.getSheetByName('Acessos').formats, { 'J2:J': 'dd/MM/yyyy HH:mm:ss' }, 'format');
+});
+
+t("a failure working out the visitor's time never costs the hit", () => {
+  const b = makeBook(), g = load(b);
+  g.Utilities.formatDate = () => { throw new Error('boom'); };
+  eq(post(g, FULL).result, 'OK', 'reply');
+  const r = b.getSheetByName('Acessos').rows[1];
+  eq([r.length, r[8], r[9]], [10, 'Brasil', ''], 'row');
+});
+
+t('upgrading a v5 sheet: visitor time filled from A and H, nothing else moves', () => {
+  const b = makeBook(), g = load(b);
+  b.tz = 'America/Sao_Paulo';
+  const old = ['Data/hora', 'Código', 'Destino', 'Idioma', 'Tipo', 'Sistema', 'Navegador', 'Fuso horário', 'País (estimado)'];
+  const t1 = new Date('2026-10-03T13:10:36Z'), t2 = new Date('2026-10-02T22:19:02Z'), t3 = new Date('2026-10-01T23:21:49Z');
+  const kept = new Date('2000-01-01T00:00:00Z');
+  const acc = b.insertSheet('Acessos');
+  acc.rows = [old, [t1, "'1", 'apps', 'en-GB', 'celular', 'iOS', 'Safari', 'America/Sao_Paulo', 'Brasil']];
+  const te = b.insertSheet('Teste');
+  te.rows = [old,
+    [t3, "'1", 'apps', 'pt-BR'],
+    [t2, "'1", 'apps', 'en-US', 'computador', 'Windows', 'Edge', 'Europe/Lisbon', 'Portugal'],
+    [t2, "'1", 'apps', 'en-US', 'computador', 'Windows', 'Edge', 'Asia/Tokyo', 'Japão', kept]];
+  const before = JSON.stringify([acc.rows.slice(1), te.rows.slice(1)].map((rs) => rs.map((r) => Array.from({ length: 9 }, (_, i) => r[i] ?? ''))));
+  const re = b.insertSheet('Resumo');
+  re.meta = [{ k: 'setup', v: '5' }];
+  post(g, Object.assign({ test: '1' }, FULL));
+  eq(acc.rows[0], HEADER10, 'Acessos header');
+  eq(te.rows[0], HEADER10, 'Teste header');
+  eq(shown(acc.rows[1][9], 'America/Sao_Paulo'), '2026-10-03 10:10:36', 'Sao Paulo row');
+  eq(te.rows[1][9], '', 'row without a zone');
+  eq(shown(te.rows[2][9], 'America/Sao_Paulo'), '2026-10-02 23:19:02', 'Lisbon row');
+  eq(te.rows[3][9], kept, 'a value already there is kept');
+  eq(JSON.stringify([acc.rows.slice(1, 2), te.rows.slice(1, 4)].map((rs) => rs.map((r) => Array.from({ length: 9 }, (_, i) => r[i] ?? '')))), before, 'A:I untouched');
+  eq(te.rows.length, 5, 'the test hit itself');
+  eq(re.meta, [{ k: 'setup', v: '6' }], 'marker');
+  const writes = te.writes;
+  g.setup();
+  eq(te.writes - writes, 1, 'a second setup writes the header only');
 });
 
 t('test=1 writes to Teste, never counts in Acessos', () => {
@@ -187,12 +270,12 @@ t('upgrading a v4 sheet: old Teste formulas go, every data row stays', () => {
   re.meta = [{ k: 'setup', v: '4' }];
   post(g, Object.assign({ test: '1' }, FULL));
   eq(te.formulas, {}, 'old Teste formulas');
-  eq(te.rows[0], HEADER9, 'Teste header');
-  eq(acc.rows[0], HEADER9, 'Acessos header');
+  eq(te.rows[0], HEADER10, 'Teste header');
+  eq(acc.rows[0], HEADER10, 'Acessos header');
   eq(acc.rows[1].slice(1), ["'1", 'apps', 'pt-BR'], 'old Acessos row untouched');
   eq(te.rows.length, 3, 'old Teste row kept, new one added');
-  eq(te.rows[2].length, 9, 'new row has every column');
-  eq(re.meta, [{ k: 'setup', v: '5' }], 'marker');
+  eq(te.rows[2].length, 10, 'new row has every column');
+  eq(re.meta, [{ k: 'setup', v: '6' }], 'marker');
   if (!b.getSheetByName('Teste resumo')) throw new Error('no Teste resumo');
 });
 
