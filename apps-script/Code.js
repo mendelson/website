@@ -15,8 +15,9 @@
  * categories: the time, the code, the destination, the browser language, the
  * device type (celular/tablet/computador), the OS family and the browser
  * family — each checked against a closed list below, no versions, no device
- * model — plus the device's time zone and the country estimated from it
- * (Zones.js; no IP, no third-party lookup). No cookie is set or read (the stub
+ * model — plus the device's time zone, the country estimated from it
+ * (Zones.js; no IP, no third-party lookup) and the time of the hit on the
+ * visitor's own clock, worked out here from that zone. No cookie is set or read (the stub
  * sends with credentials:'omit', so not even a Google login cookie travels
  * with it), and Apps Script never sees the caller's IP address.
  *
@@ -40,9 +41,18 @@ var TAB_HITS = 'Acessos';
 var TAB_TEST = 'Teste';
 var TAB_SUMMARY = 'Resumo';
 var TAB_TEST_SUMMARY = 'Teste resumo';
-// A:I. The QUERYs in summary_ name these columns by letter.
-var HEADER = ['Data/hora', 'Código', 'Destino', 'Idioma', 'Tipo', 'Sistema',
-              'Navegador', 'Fuso horário', 'País (estimado)'];
+// A:J. The QUERYs in summary_ name these columns by letter. A is the hit in
+// the sheet's (= the owner's) clock and J the same instant on the visitor's
+// clock; J goes last, not next to A, so that adding it moved no column the
+// QUERYs read and no row already written. A function, not a var: it asks
+// Session, and tools/test_stub.js loads this file with no Apps Script around.
+function header_() {
+  return ['Data/hora (' + zoneName_(Session.getScriptTimeZone()) + ')',
+          'Código', 'Destino', 'Idioma', 'Tipo', 'Sistema', 'Navegador',
+          'Fuso horário', 'País (estimado)', 'Data/hora (fuso do visitante)'];
+}
+var COL_TZ = 8, COL_LOCAL = 10, LOCAL_COLUMN = 'J2:J';
+var TIME_FORMAT = 'dd/MM/yyyy HH:mm:ss';
 
 // The stub classifies the user agent into these and nothing finer; anything
 // else becomes an empty cell. Closed lists, so the anonymous endpoint cannot
@@ -86,9 +96,13 @@ function doPost(e) {
   // Code as text ('1', not 1): the Resumo QUERYs group on it, and a column of
   // numbers would turn a future code like '01' into 1.
   var sheet = tab_(tab);
-  sheet.appendRow([new Date(), "'" + code, to, lang,
+  var now = new Date();
+  var local = '';
+  try { local = localTime_(now, tz, sheet.getParent().getSpreadsheetTimeZone()); }
+  catch (err) {}
+  sheet.appendRow([now, "'" + code, to, lang,
                    pick_(p.type, TYPES), pick_(p.os, OSES),
-                   pick_(p.browser, BROWSERS), tz, country]);
+                   pick_(p.browser, BROWSERS), tz, country, local]);
   // Count FIRST, then tidy: a setup that fails (two first hits racing to
   // create Resumo) must never cost the hit that triggered it.
   try {
@@ -103,7 +117,7 @@ function doGet() {
 
 // Bump when setup() changes: the next POST then re-runs it on the live sheet,
 // so a fix to the tabs or formulas reaches production with the deploy alone.
-var SETUP_VERSION = '5';
+var SETUP_VERSION = '6';
 
 function setup() {
   var hits = tab_(TAB_HITS);
@@ -121,9 +135,13 @@ function setup() {
   // can run on every setup without touching a single hit.
   clearFormulas_(test);
   // Header row of both data tabs: older rows simply have the new columns
-  // empty.
+  // empty — except the visitor's time, which is filled in below for every
+  // row that has a zone.
+  var zone = book.getSpreadsheetTimeZone();
   [hits, test].forEach(function (sh) {
-    sh.getRange(1, 1, 1, HEADER.length).setValues([HEADER]);
+    sh.getRange(1, 1, 1, COL_LOCAL).setValues([header_()]);
+    backfillLocal_(sh, zone);
+    sh.getRange(LOCAL_COLUMN).setNumberFormat(TIME_FORMAT);
   });
   // The same summary over Acessos and over Teste: a test=1 POST then proves
   // the formulas against real rows without adding a count to Acessos.
@@ -205,6 +223,56 @@ function clearFormulas_(sheet) {
   }
 }
 
+// What the owner's clock is called in column A's header.
+function zoneName_(tz) {
+  return { 'America/Sao_Paulo': 'Brasília' }[tz] || tz;
+}
+
+// The instant `date` on the clock of zone `tz`, as a Date the sheet will SHOW
+// as that wall time. A cell keeps a date as a bare serial — the Date's instant
+// converted through the SHEET's zone when it is written — so shifting the
+// instant by (visitor's offset - sheet's offset) makes the cell read the
+// visitor's time. Only for zones the table knows: Utilities.formatDate
+// silently treats an unknown zone id as GMT, and a confident wrong time is
+// worse than an empty cell.
+function localTime_(date, tz, sheetZone) {
+  if (!knownZone_(tz)) return '';
+  return new Date(date.getTime() +
+    (offsetMinutes_(date, tz) - offsetMinutes_(date, sheetZone)) * 60000);
+}
+
+function knownZone_(tz) {
+  return /^(Etc\/)?UTC$/.test(tz) ||
+    (typeof ZONE_COUNTRY !== 'undefined' &&
+     Object.prototype.hasOwnProperty.call(ZONE_COUNTRY, tz));
+}
+
+// "-0300" -> -180, "+0545" -> 345.
+function offsetMinutes_(date, tz) {
+  var m = /^([+-])(\d\d)(\d\d)$/.exec(Utilities.formatDate(date, tz, 'Z'));
+  if (!m) throw new Error('no offset for ' + tz);
+  return (m[1] === '-' ? -1 : 1) * (60 * Number(m[2]) + Number(m[3]));
+}
+
+// Rows written before column J existed get it from what they already carry:
+// the instant in A and the zone in H. A row that has a value is left alone,
+// and nothing is written when nothing changed.
+function backfillLocal_(sh, sheetZone) {
+  var n = sh.getLastRow() - 1;
+  if (n < 1) return;
+  var range = sh.getRange(2, 1, n, COL_LOCAL);
+  var changed = false;
+  var out = range.getValues().map(function (r) {
+    var v = r[COL_LOCAL - 1];
+    if (v === '' && Object.prototype.toString.call(r[0]) === '[object Date]') {
+      try { v = localTime_(r[0], String(r[COL_TZ - 1]), sheetZone); } catch (e) {}
+      if (v !== '') changed = true;
+    }
+    return [v];
+  });
+  if (changed) sh.getRange(2, COL_LOCAL, n, 1).setValues(out);
+}
+
 function pick_(v, list) {
   v = String(v || '');
   return list.indexOf(v) >= 0 ? v : '';
@@ -239,7 +307,7 @@ function tab_(name, noHeader) {
   if (!sheet) {
     sheet = book.insertSheet(name);
     if (!noHeader) {
-      sheet.appendRow(HEADER);
+      sheet.appendRow(header_());
       sheet.setFrozenRows(1);
     }
   }

@@ -98,6 +98,14 @@ on every deploy**. Never edit `public/`; edit the generator or the fragment.
   lookup. `check_build.py` fails if the stub starts sending a field beyond
   `code, to, lang, type, os, browser, tz` — a new field about the visitor
   has to be added on purpose. Gender cannot be observed by a page at all.
+- **Each hit's time is in the sheet twice**: column A on the sheet's clock
+  (the owner's, `America/Sao_Paulo`), column J on the visitor's, which the
+  counter derives from the zone in H — the stub does not send it. A cell
+  keeps a bare serial (the Date converted through the SHEET's zone when it is
+  written), so `localTime_` shifts the instant by the offset difference.
+  Only for zones in `Zones.js` (plus `UTC`): `Utilities.formatDate` silently
+  reads an unknown zone id as GMT. J went last so adding it moved no column
+  the Resumo QUERYs read; setup fills J for older rows that have a zone.
 - **`apps-script/Zones.js` is generated** (`node tools/gen_zones.js`, from the
   machine's tzdata `zone.tab` + link aliases, country names from Node's ICU
   in pt-BR). Do not edit it by hand.
